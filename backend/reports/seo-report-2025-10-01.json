@@ -1,0 +1,160 @@
+{
+  "generated": "2025-10-01T11:27:34.970Z",
+  "products": {
+    "total": 6,
+    "withSlugs": 6,
+    "withSEOTitles": 6,
+    "withSEODescriptions": 6,
+    "withMetaKeywords": 6,
+    "withFocusKeywords": 6,
+    "withImageAlt": 6,
+    "averageSEOScore": 73.33333333333333,
+    "byScoreRange": {
+      "excellent": 0,
+      "good": 6,
+      "needsWork": 0,
+      "poor": 0
+    },
+    "topPerformers": [],
+    "needsImprovement": []
+  },
+  "visitPlaces": {
+    "total": 3,
+    "withSlugs": 1,
+    "withSEOTitles": 1,
+    "withSEODescriptions": 1,
+    "averageSEOScore": 14.333333333333334
+  },
+  "overall": {
+    "totalSEOScore": 73.33333333333333,
+    "seoHealthGrade": "B",
+    "criticalIssues": 0,
+    "highPriorityIssues": 0,
+    "totalRecommendations": 2
+  },
+  "recommendations": [
+    {
+      "type": "low",
+      "category": "Technical",
+      "issue": "Regular sitemap updates",
+      "description": "Ensure sitemap is updated regularly with new products",
+      "action": "Set up automated sitemap generation on product additions"
+    },
+    {
+      "type": "low",
+      "category": "Technical",
+      "issue": "Schema markup",
+      "description": "Ensure all pages have proper structured data",
+      "action": "Verify schema markup is correctly implemented on all pages"
+    }
+  ],
+  "keywords": {
+    "totalUniqueKeywords": 19,
+    "categoryKeywords": {},
+    "commonKeywords": {
+      "[\"gandhara\"]": 2,
+      "hand": 2,
+      "gandhara art": 2,
+      "pakistani crafts": 6,
+      "handmade": 6,
+      "stone art": 6,
+      "gandhara": 6,
+      "taxila": 6,
+      "[\"faghmd\"]": 1,
+      "antique products": 2,
+      "salt": 1,
+      "coin": 1,
+      "[\"00.00\"]": 1,
+      "kuch": 1,
+      "bhi": 1,
+      "[\"00\"]": 2,
+      "ruiop": 1,
+      "featuredproducts": 2,
+      "next": 1
+    },
+    "focusKeywordUsage": {
+      "[\"gandhara\"]": 2,
+      "[\"faghmd\"]": 1,
+      "[\"00.00\"]": 1,
+      "[\"00\"]": 2
+    },
+    "topKeywords": [
+      {
+        "keyword": "pakistani crafts",
+        "count": 6
+      },
+      {
+        "keyword": "handmade",
+        "count": 6
+      },
+      {
+        "keyword": "stone art",
+        "count": 6
+      },
+      {
+        "keyword": "gandhara",
+        "count": 6
+      },
+      {
+        "keyword": "taxila",
+        "count": 6
+      },
+      {
+        "keyword": "[\"gandhara\"]",
+        "count": 2
+      },
+      {
+        "keyword": "hand",
+        "count": 2
+      },
+      {
+        "keyword": "gandhara art",
+        "count": 2
+      },
+      {
+        "keyword": "antique products",
+        "count": 2
+      },
+      {
+        "keyword": "[\"00\"]",
+        "count": 2
+      },
+      {
+        "keyword": "featuredproducts",
+        "count": 2
+      },
+      {
+        "keyword": "[\"faghmd\"]",
+        "count": 1
+      },
+      {
+        "keyword": "salt",
+        "count": 1
+      },
+      {
+        "keyword": "coin",
+        "count": 1
+      },
+      {
+        "keyword": "[\"00.00\"]",
+        "count": 1
+      },
+      {
+        "keyword": "kuch",
+        "count": 1
+      },
+      {
+        "keyword": "bhi",
+        "count": 1
+      },
+      {
+        "keyword": "ruiop",
+        "count": 1
+      },
+      {
+        "keyword": "next",
+        "count": 1
+      }
+    ]
+  }
+}

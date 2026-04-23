@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; max-height: 200px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Product API Test</h1>
+    <p class="info">Testing product endpoints with correct API paths</p>
+    
+    <div class="test-section">
+        <h3>Test 1: Get All Products</h3>
+        <button onclick="testAllProducts()">Test /api/products/all</button>
+        <div id="all-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Get Products by Category</h3>
+        <button onclick="testCategoryProducts()">Test /api/products/category/Garden Decor</button>
+        <div id="category-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Direct API Call (No Proxy)</h3>
+        <button onclick="testDirectAPI()">Test http://localhost:5000/api/products/all</button>
+        <div id="direct-result"></div>
+    </div>
+
+    <script>
+        async function testAPI(url, resultId, description) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = `<p class="info">Testing ${description}...</p>`;
+            
+            console.log(`\n🧪 Testing: ${description}`);
+            console.log('URL:', url);
+            
+            try {
+                const response = await fetch(url);
+                
+                console.log('Response status:', response.status);
+                console.log('Response URL:', response.url);
+                
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                const statusClass = response.ok ? 'success' : 'error';
+                const resultPreview = Array.isArray(result) ? 
+                    `Array with ${result.length} items` : 
+                    JSON.stringify(result, null, 2).substring(0, 200) + '...';
+                
+                resultDiv.innerHTML = `
+                    <div class="${statusClass}">
+                        <h4>${description} Results:</h4>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Actual URL:</strong> ${response.url}</p>
+                        <p><strong>Data Preview:</strong></p>
+                        <pre>${resultPreview}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>${description} - ERROR</h4>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function testAllProducts() {
+            testAPI('/api/products/all', 'all-result', 'Get All Products (Proxy)');
+        }
+
+        function testCategoryProducts() {
+            testAPI('/api/products/category/Garden%20Decor', 'category-result', 'Get Garden Decor Products (Proxy)');
+        }
+
+        function testDirectAPI() {
+            testAPI('http://localhost:5000/api/products/all', 'direct-result', 'Direct API Call (No Proxy)');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .result {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Direct Test</h1>
+    <p>Testing API endpoints from frontend to backend</p>
+    
+    <div>
+        <button onclick="testAllProducts()">Test /api/products</button>
+        <button onclick="testFeaturedProducts()">Test /api/products/category/featuredProducts</button>
+        <button onclick="clearResults()">Clear</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        function addResult(title, data) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultsDiv.insertBefore(resultDiv, resultsDiv.firstChild);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testAllProducts() {
+            try {
+                console.log('Testing:', `${API_BASE_URL}/api/products`);
+                const response = await fetch(`${API_BASE_URL}/api/products?page=1&limit=20`);
+                const data = await response.json();
+                addResult('✅ All Products Response', {
+                    status: response.status,
+                    productsCount: data.products?.length || 0,
+                    total: data.total,
+                    products: data.products
+                });
+                console.log('All Products:', data);
+            } catch (error) {
+                addResult('❌ All Products Error', {
+                    error: error.message,
+                    stack: error.stack
+                });
+                console.error('Error:', error);
+            }
+        }
+        
+        async function testFeaturedProducts() {
+            try {
+                console.log('Testing:', `${API_BASE_URL}/api/products/category/featuredProducts`);
+                const response = await fetch(`${API_BASE_URL}/api/products/category/featuredProducts`);
+                const data = await response.json();
+                addResult('✅ Featured Products Response', {
+                    status: response.status,
+                    productsCount: data.products?.length || 0,
+                    products: data.products
+                });
+                console.log('Featured Products:', data);
+            } catch (error) {
+                addResult('❌ Featured Products Error', {
+                    error: error.message,
+                    stack: error.stack
+                });
+                console.error('Error:', error);
+            }
+        }
+        
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            console.log('API Base URL:', API_BASE_URL);
+            testAllProducts();
+            setTimeout(() => testFeaturedProducts(), 1000);
+        });
+    </script>
+</body>
+</html>

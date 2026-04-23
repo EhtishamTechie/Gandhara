@@ -1,0 +1,368 @@
+const sharp = require('sharp');
+const fs = require('fs').promises;
+const path = require('path');
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+// Configuration
+const CONFIG = {
+  PRODUCTION: process.env.NODE_ENV === 'production',
+  BASE_PATH: process.env.NODE_ENV === 'production' 
+    ? '/var/www/Gandhara' 
+    : path.join(__dirname, '../..'),
+  
+  RESPONSIVE_SIZES: [
+    { width: 400, suffix: '-400w' },
+    { width: 800, suffix: '-800w' },
+    { width: 1200, suffix: '-1200w' },
+    { width: 1600, suffix: '-1600w' },
+  ],
+  
+  FORMATS: ['avif', 'webp'],
+  AVIF_QUALITY: 75,
+  WEBP_QUALITY: 80,
+  MAX_WIDTH: 1920,
+  MAX_HEIGHT: 1920,
+};
+
+// Statistics
+const stats = {
+  products: { total: 0, processed: 0, skipped: 0, errors: 0 },
+  tours: { total: 0, processed: 0, skipped: 0, errors: 0 },
+  masters: { total: 0, processed: 0, skipped: 0, errors: 0 },
+  static: { total: 0, processed: 0, skipped: 0, errors: 0 },
+  totalOriginalSize: 0,
+  totalOptimizedSize: 0,
+  startTime: Date.now(),
+};
+
+/**
+ * Check if optimized versions already exist
+ */
+async function hasOptimizedVersions(filePath, baseName, dir) {
+  try {
+    // Check if AVIF version exists (primary indicator)
+    const avifPath = path.join(dir, `${baseName}.avif`);
+    await fs.access(avifPath);
+    
+    // Check if at least one responsive size exists
+    const avif400Path = path.join(dir, `${baseName}-400w.avif`);
+    await fs.access(avif400Path);
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Optimize a single image to multiple formats and sizes
+ */
+async function optimizeImage(filePath, outputDir, category) {
+  const ext = path.extname(filePath);
+  const baseName = path.basename(filePath, ext);
+  
+  // Skip if already optimized
+  if (await hasOptimizedVersions(filePath, baseName, outputDir)) {
+    stats[category].skipped++;
+    return;
+  }
+  
+  try {
+    const fileStats = await fs.stat(filePath);
+    stats.totalOriginalSize += fileStats.size;
+    const originalSizeMB = (fileStats.size / 1024 / 1024).toFixed(2);
+    
+    console.log(`  📸 ${baseName}${ext} (${originalSizeMB} MB)`);
+    
+    const image = sharp(filePath);
+    const metadata = await image.metadata();
+    
+    let generatedCount = 0;
+    let generatedSize = 0;
+    
+    // Generate responsive sizes
+    for (const size of CONFIG.RESPONSIVE_SIZES) {
+      // Skip if image is smaller than target size
+      if (metadata.width < size.width) continue;
+      
+      for (const format of CONFIG.FORMATS) {
+        const outputPath = path.join(outputDir, `${baseName}${size.suffix}.${format}`);
+        
+        try {
+          const quality = format === 'avif' ? CONFIG.AVIF_QUALITY : CONFIG.WEBP_QUALITY;
+          
+          await sharp(filePath)
+            .resize(size.width, null, { 
+              fit: 'inside', 
+              withoutEnlargement: true 
+            })
+            [format]({ quality })
+            .toFile(outputPath);
+          
+          const newSize = (await fs.stat(outputPath)).size;
+          generatedSize += newSize;
+          generatedCount++;
+        } catch (err) {
+          console.error(`    ❌ Failed ${size.suffix}.${format}:`, err.message);
+        }
+      }
+    }
+    
+    // Generate original quality optimized versions
+    for (const format of CONFIG.FORMATS) {
+      const outputPath = path.join(outputDir, `${baseName}.${format}`);
+      
+      try {
+        const quality = format === 'avif' ? CONFIG.AVIF_QUALITY : CONFIG.WEBP_QUALITY;
+        
+        await sharp(filePath)
+          .resize(CONFIG.MAX_WIDTH, CONFIG.MAX_HEIGHT, { 
+            fit: 'inside', 
+            withoutEnlargement: true 
+          })
+          [format]({ quality })
+          .toFile(outputPath);
+        
+        const newSize = (await fs.stat(outputPath)).size;
+        generatedSize += newSize;
+        generatedCount++;
+      } catch (err) {
+        console.error(`    ❌ Failed original.${format}:`, err.message);
+      }
+    }
+    
+    stats.totalOptimizedSize += generatedSize;
+    stats[category].processed++;
+    
+    const savings = ((1 - generatedSize / fileStats.size) * 100).toFixed(1);
+    console.log(`    ✅ Generated ${generatedCount} files, saved ${savings}%`);
+    
+  } catch (err) {
+    stats[category].errors++;
+    console.error(`  ❌ Error processing ${baseName}:`, err.message);
+  }
+}
+
+/**
+ * Optimize Product Images from Database
+ */
+async function optimizeProductImages() {
+  console.log('\n🛍️  OPTIMIZING PRODUCT IMAGES\n');
+  console.log('=' .repeat(60));
+  
+  try {
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/gandhara');
+    
+    const Product = mongoose.model('Product', new mongoose.Schema({
+      image: String,
+      images: [String],
+      title: String,
+    }));
+    
+    // Find products with JPG/PNG images (not optimized)
+    const products = await Product.find({
+      image: { $regex: /\.(jpg|jpeg|png)$/i }
+    }).select('image images title');
+    
+    stats.products.total = products.length;
+    console.log(`Found ${products.length} products needing optimization\n`);
+    
+    for (const product of products) {
+      if (!product.image) continue;
+      
+      const imagePath = path.join(
+        CONFIG.BASE_PATH,
+        'backend',
+        product.image.replace(/^uploads\//, 'uploads/')
+      );
+      
+      try {
+        await fs.access(imagePath);
+        await optimizeImage(imagePath, path.dirname(imagePath), 'products');
+      } catch {
+        console.log(`  ⚠️  File not found: ${product.image}`);
+        stats.products.errors++;
+      }
+      
+      // Also optimize additional images array
+      if (product.images && product.images.length > 0) {
+        for (const img of product.images) {
+          if (!/\.(jpg|jpeg|png)$/i.test(img)) continue;
+          
+          const imgPath = path.join(
+            CONFIG.BASE_PATH,
+            'backend',
+            img.replace(/^uploads\//, 'uploads/')
+          );
+          
+          try {
+            await fs.access(imgPath);
+            await optimizeImage(imgPath, path.dirname(imgPath), 'products');
+          } catch {}
+        }
+      }
+    }
+    
+    await mongoose.disconnect();
+  } catch (err) {
+    console.error('Error optimizing products:', err.message);
+  }
+}
+
+/**
+ * Optimize Tour/Visit Place Images
+ */
+async function optimizeTourImages() {
+  console.log('\n🗺️  OPTIMIZING TOUR IMAGES\n');
+  console.log('=' .repeat(60));
+  
+  const tourDir = path.join(CONFIG.BASE_PATH, 'frontend/public/TourImages');
+  
+  try {
+    const files = await fs.readdir(tourDir);
+    const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f));
+    
+    stats.tours.total = imageFiles.length;
+    console.log(`Found ${imageFiles.length} tour images\n`);
+    
+    for (const file of imageFiles) {
+      const filePath = path.join(tourDir, file);
+      await optimizeImage(filePath, tourDir, 'tours');
+    }
+  } catch (err) {
+    console.error('Error optimizing tours:', err.message);
+  }
+}
+
+/**
+ * Optimize Static Images (Banners, Hero, etc.)
+ */
+async function optimizeStaticImages() {
+  console.log('\n🎨 OPTIMIZING STATIC IMAGES\n');
+  console.log('=' .repeat(60));
+  
+  const staticDirs = [
+    'frontend/public/GandharaImages',
+    'frontend/public/ProductVideos', // For video thumbnails
+  ];
+  
+  for (const dir of staticDirs) {
+    const fullPath = path.join(CONFIG.BASE_PATH, dir);
+    
+    try {
+      const files = await fs.readdir(fullPath);
+      const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f));
+      
+      stats.static.total += imageFiles.length;
+      console.log(`\n📁 ${dir} (${imageFiles.length} images)\n`);
+      
+      for (const file of imageFiles) {
+        const filePath = path.join(fullPath, file);
+        await optimizeImage(filePath, fullPath, 'static');
+      }
+    } catch (err) {
+      console.log(`  ⚠️  Directory not found: ${dir}`);
+    }
+  }
+}
+
+/**
+ * Optimize Master/Upload Images
+ */
+async function optimizeMasterImages() {
+  console.log('\n📦 OPTIMIZING MASTER/UPLOAD IMAGES\n');
+  console.log('=' .repeat(60));
+  
+  const masterDir = path.join(CONFIG.BASE_PATH, 'backend/uploads/masters');
+  
+  try {
+    const files = await fs.readdir(masterDir);
+    const imageFiles = files.filter(f => /\.(jpg|jpeg|png)$/i.test(f));
+    
+    stats.masters.total = imageFiles.length;
+    console.log(`Found ${imageFiles.length} master images\n`);
+    
+    for (const file of imageFiles) {
+      const filePath = path.join(masterDir, file);
+      await optimizeImage(filePath, masterDir, 'masters');
+    }
+  } catch (err) {
+    console.log('  ℹ️  No master images directory');
+  }
+}
+
+/**
+ * Print final statistics
+ */
+function printStats() {
+  const duration = ((Date.now() - stats.startTime) / 1000 / 60).toFixed(1);
+  const originalMB = (stats.totalOriginalSize / 1024 / 1024).toFixed(2);
+  const optimizedMB = (stats.totalOptimizedSize / 1024 / 1024).toFixed(2);
+  const savings = stats.totalOriginalSize > 0 
+    ? ((1 - stats.totalOptimizedSize / stats.totalOriginalSize) * 100).toFixed(1)
+    : 0;
+  
+  console.log('\n' + '='.repeat(60));
+  console.log('🎉 OPTIMIZATION COMPLETE!');
+  console.log('='.repeat(60));
+  
+  console.log('\n📊 SUMMARY BY CATEGORY:\n');
+  
+  const categories = ['products', 'tours', 'masters', 'static'];
+  categories.forEach(cat => {
+    const s = stats[cat];
+    console.log(`  ${cat.toUpperCase()}: ${s.processed} processed, ${s.skipped} skipped, ${s.errors} errors (${s.total} total)`);
+  });
+  
+  const totalProcessed = Object.values(stats).reduce((sum, s) => 
+    sum + (s.processed || 0), 0
+  );
+  const totalSkipped = Object.values(stats).reduce((sum, s) => 
+    sum + (s.skipped || 0), 0
+  );
+  const totalErrors = Object.values(stats).reduce((sum, s) => 
+    sum + (s.errors || 0), 0
+  );
+  
+  console.log('\n📈 OVERALL RESULTS:\n');
+  console.log(`  ✅ Images Optimized: ${totalProcessed}`);
+  console.log(`  ⏭️  Already Optimized: ${totalSkipped}`);
+  console.log(`  ❌ Errors: ${totalErrors}`);
+  console.log(`  ⏱️  Time Elapsed: ${duration} minutes`);
+  
+  console.log('\n💾 FILE SIZE SAVINGS:\n');
+  console.log(`  📥 Original Size: ${originalMB} MB`);
+  console.log(`  📤 Optimized Size: ${optimizedMB} MB`);
+  console.log(`  💰 Space Saved: ${savings}%`);
+  
+  console.log('\n✨ All done! Your website is now blazing fast! 🚀\n');
+}
+
+/**
+ * Main execution
+ */
+async function main() {
+  console.log('\n╔════════════════════════════════════════════════════════════╗');
+  console.log('║        GANDHARA ARTS - COMPREHENSIVE IMAGE OPTIMIZER       ║');
+  console.log('╚════════════════════════════════════════════════════════════╝\n');
+  
+  try {
+    await optimizeProductImages();
+    await optimizeTourImages();
+    await optimizeStaticImages();
+    await optimizeMasterImages();
+    
+    printStats();
+  } catch (err) {
+    console.error('\n❌ Fatal error:', err);
+    process.exit(1);
+  }
+}
+
+// Run if called directly
+if (require.main === module) {
+  main().catch(console.error);
+}
+
+module.exports = { optimizeImage, optimizeProductImages, optimizeTourImages };

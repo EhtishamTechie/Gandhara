@@ -1,0 +1,108 @@
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const WordPressRedirects = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    console.log('WordPressRedirects - Checking path:', path);
+    
+    if (path.startsWith('/product/')) {
+      const productIdentifier = path.replace('/product/', '').replace(/\/$/, '');
+      
+      // Check if it contains a MongoDB ObjectID anywhere in the string (24 hex chars)
+      // This handles:
+      // 1. /product/68b58d329edbabdf2e5019d3 (pure ObjectId)
+      // 2. /product/grave-designs-68b58d329edbabdf2e5019d3 (slug-objectid)
+      // 3. /product/grave-designs (clean slug)
+      const hasMongoId = /[a-f0-9]{24}/i.test(productIdentifier);
+      
+      // If it contains a MongoDB ID, it's a valid product URL - don't redirect
+      if (hasMongoId) {
+        console.log('✅ Product URL with MongoDB ID detected, allowing React Router to handle');
+        return;
+      }
+      
+      // If it's a clean slug (hyphens, no spaces, reasonable length), let it through
+      // This allows: /product/grave-designs-personalized-memorial
+      if (productIdentifier.match(/^[a-z0-9-]+$/i) && productIdentifier.length > 5 && !productIdentifier.includes(' ')) {
+        console.log('✅ Valid product slug detected, allowing React Router to handle');
+        return;
+      }
+      
+      // Only redirect old WordPress URLs with spaces or weird patterns
+      console.log('⚠️ Old WordPress pattern detected:', productIdentifier);
+      
+      // Enhanced pattern matching - use productIdentifier instead of productSlug
+      if (productIdentifier.match(/(kitchen|grinder|grinding|pounder|mortar|pestle|crusher|mill)/i)) {
+        console.log('→ Redirecting to mortar-and-pestle');
+        navigate('/category/mortar-and-pestle', { replace: true });
+        return;
+      }
+      
+      if (productIdentifier.match(/(tile|tiles|building|wall|floor|stone-tiles)/i)) {
+        console.log('→ Redirecting to building-embellishing');
+        navigate('/category/building-embellishing', { replace: true });
+        return;
+      }
+      
+      if (productIdentifier.match(/(buddha|meditation|statue|gandhara|sculpture)/i)) {
+        console.log('→ Redirecting to gandhara-art');
+        navigate('/category/gandhara-art', { replace: true });
+        return;
+      }
+      
+      if (productIdentifier.match(/(bowl|utensil|crockery|kitchen|plate|cup)/i)) {
+        console.log('→ Redirecting to crockery');
+        navigate('/category/crockery', { replace: true });
+        return;
+      }
+      
+      if (productIdentifier.match(/(lamp|decor|decoration|home|interior)/i)) {
+        console.log('→ Redirecting to home-decor');
+        navigate('/category/home-decor', { replace: true });
+        return;
+      }
+      
+      if (productIdentifier.match(/(fountain|garden|outdoor|landscaping)/i)) {
+        console.log('→ Redirecting to garden-decor');
+        navigate('/category/garden-decor', { replace: true });
+        return;
+      }
+      
+      if (productIdentifier.match(/(fireplace|fire)/i)) {
+        console.log('→ Redirecting to fireplaces');
+        navigate('/category/fireplaces', { replace: true });
+        return;
+      }
+      
+      // If no specific match, redirect to all products
+      console.log('→ No specific match, redirecting to /products');
+      navigate('/products', { replace: true });
+      return;
+    }
+    
+    // Handle category URLs
+    if (path.startsWith('/product-category/')) {
+      const categorySlug = path.replace('/product-category/', '').replace(/\/$/, '');
+      console.log('→ Redirecting category to:', `/category/${categorySlug}`);
+      navigate(`/category/${categorySlug}`, { replace: true });
+      return;
+    }
+    
+  }, [location.pathname, navigate]);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-stone-50">
+      <div className="text-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+        <p className="text-stone-600 mb-2">Finding the right products for you...</p>
+        <p className="text-sm text-stone-500">Redirecting from old page</p>
+      </div>
+    </div>
+  );
+};
+
+export default WordPressRedirects;

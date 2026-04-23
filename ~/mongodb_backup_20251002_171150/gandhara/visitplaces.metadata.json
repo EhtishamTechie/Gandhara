@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"603e556b0f9241f0b6e605ec534f6b94","collectionName":"visitplaces","type":"collection"}

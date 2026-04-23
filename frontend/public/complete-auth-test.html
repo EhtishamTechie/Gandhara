@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Auth Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Complete Authentication Test</h1>
+    <p class="info">Testing all authentication endpoints with proxy configuration</p>
+    
+    <div class="test-section">
+        <h3>Test 1: Login (Proxy)</h3>
+        <button onclick="testLogin()">Test Login with /api/auth/login</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Profile Check (Proxy)</h3>
+        <button onclick="testProfile()">Test Profile with /api/auth/profile</button>
+        <div id="profile-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Full Authentication Flow</h3>
+        <button onclick="testFullFlow()">Test Login → Profile Flow</button>
+        <div id="flow-result"></div>
+    </div>
+
+    <script>
+        const testData = {
+            email: 'admin@gandharaofficial.org',
+            password: 'Admin@2025!'
+        };
+
+        let currentToken = null;
+
+        async function testAuth(url, method, body, headers, resultId, description) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = `<p class="info">Testing ${description}...</p>`;
+            
+            console.log(`\n🧪 Testing: ${description}`);
+            console.log('URL:', url);
+            console.log('Method:', method);
+            console.log('Headers:', headers);
+            console.log('Body:', body);
+            
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: headers || { 'Content-Type': 'application/json' },
+                    body: body ? JSON.stringify(body) : undefined
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response URL:', response.url);
+                
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                const statusClass = response.ok ? 'success' : 'error';
+                resultDiv.innerHTML = `
+                    <div class="${statusClass}">
+                        <h4>${description} Results:</h4>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Actual URL:</strong> ${response.url}</p>
+                        <p><strong>Success:</strong> ${result.success}</p>
+                        <p><strong>Message:</strong> ${result.message}</p>
+                        ${result.token ? `<p><strong>Token:</strong> ✅ Received (${result.token.length} chars)</p>` : ''}
+                        ${result.admin ? `<p><strong>Admin:</strong> ${result.admin.email} (${result.admin.role})</p>` : ''}
+                    </div>
+                `;
+
+                return { success: response.ok, data: result };
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>${description} - ERROR</h4>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testLogin() {
+            const result = await testAuth(
+                '/api/auth/login', 
+                'POST', 
+                testData, 
+                { 'Content-Type': 'application/json' },
+                'login-result', 
+                'Login (Proxy URL)'
+            );
+            
+            if (result.success && result.data.token) {
+                currentToken = result.data.token;
+                localStorage.setItem('adminToken', currentToken);
+                console.log('✅ Token saved for profile test');
+            }
+        }
+
+        async function testProfile() {
+            const token = currentToken || localStorage.getItem('adminToken');
+            
+            if (!token) {
+                document.getElementById('profile-result').innerHTML = 
+                    '<div class="error">❌ No token available. Run login test first.</div>';
+                return;
+            }
+
+            await testAuth(
+                '/api/auth/profile', 
+                'GET', 
+                null, 
+                { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json' 
+                },
+                'profile-result', 
+                'Profile Check (Proxy URL)'
+            );
+        }
+
+        async function testFullFlow() {
+            const resultDiv = document.getElementById('flow-result');
+            resultDiv.innerHTML = '<p class="info">Running full authentication flow...</p>';
+            
+            // Step 1: Login
+            console.log('\n🔄 Step 1: Login');
+            const loginResult = await testAuth(
+                '/api/auth/login', 
+                'POST', 
+                testData, 
+                { 'Content-Type': 'application/json' },
+                'flow-result', 
+                'Full Flow - Login'
+            );
+            
+            if (!loginResult.success) {
+                resultDiv.innerHTML += '<div class="error">❌ Login failed, stopping flow</div>';
+                return;
+            }
+            
+            currentToken = loginResult.data.token;
+            
+            // Step 2: Profile check
+            console.log('\n🔄 Step 2: Profile Check');
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            
+            const profileResult = await testAuth(
+                '/api/auth/profile', 
+                'GET', 
+                null, 
+                { 
+                    'Authorization': `Bearer ${currentToken}`,
+                    'Content-Type': 'application/json' 
+                },
+                'flow-result', 
+                'Full Flow - Profile'
+            );
+            
+            if (profileResult.success) {
+                resultDiv.innerHTML += '<div class="success">✅ Full authentication flow completed successfully!</div>';
+            } else {
+                resultDiv.innerHTML += '<div class="error">❌ Profile check failed</div>';
+            }
+        }
+    </script>
+</body>
+</html>

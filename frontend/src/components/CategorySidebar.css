@@ -1,0 +1,442 @@
+/* ============================================================
+ * CategorySidebar.css — Section 3 (v3: always docked, themed)
+ *
+ * Desktop:  panel is permanently docked on the right edge below
+ *           the navbar. Layout is pushed left by the parent flex
+ *           container (see .has-right-sidebar rule near the end
+ *           of this file).  The panel uses a solid themed dark
+ *           palette (navbar->sidebar gradient) so it reads as a
+ *           deliberate extension of the site chrome, with a
+ *           subtle gold hairline + glow on the left edge.
+ *
+ * Mobile:   unchanged — gold "☰ Categories" tab opens a full-
+ *           height overlay with a dark backdrop.
+ *
+ * Z-index ladder:
+ *   Navbar   z-50   (set in Navbar)
+ *   Sidebar  z-40   (this file)
+ *   Backdrop z-30   (mobile only)
+ * ============================================================ */
+
+/* Width exposed as a CSS variable so the layout push below can
+   reference the same value.  Override here if you change 260px. */
+:root {
+  --sidebar-width: 260px;
+  --sidebar-top-offset: 80px;  /* height of the navbar */
+}
+
+/* --- Outer fixed host -------------------------------------- */
+.cat-sidebar-host {
+  position: fixed;
+  right: 0;
+  top: var(--sidebar-top-offset);
+  bottom: 0;
+  width: var(--sidebar-width);
+  z-index: 40;
+  pointer-events: none;       /* children re-enable as needed */
+}
+
+/*
+ * Mobile overlay open: stack above the navbar (z-50) so the close button
+ * and category links are not covered and receive pointer events.
+ */
+@media (max-width: 1023px) {
+  .cat-sidebar-host.cat-sidebar-host--overlay-open {
+    z-index: 55;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* backdrop + panel opt in */
+  }
+
+  .cat-sidebar-host.cat-sidebar-host--overlay-open .cat-sidebar-backdrop,
+  .cat-sidebar-host.cat-sidebar-host--overlay-open .cat-sidebar-panel,
+  .cat-sidebar-host.cat-sidebar-host--overlay-open .cat-sidebar-tab {
+    pointer-events: auto;
+  }
+}
+
+/* --- Collapsed vertical tab (mobile only) ------------------ */
+.cat-sidebar-tab {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  width: 36px;
+  min-height: 160px;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--color-accent-gold);
+  color: var(--color-bg-primary);
+  border: none;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  box-shadow: -2px 2px 12px rgba(0, 0, 0, 0.35);
+
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.cat-sidebar-tab:hover {
+  background: var(--color-accent-gold-soft);
+  transform: translateX(-2px);
+}
+
+.cat-sidebar-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* --- Panel (shared desktop + mobile) ----------------------- */
+.cat-sidebar-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text-primary);
+
+  /* Solid, themed palette so the sidebar reads as a deliberate
+     extension of the navbar rather than a washed-out overlay.
+     Uses the Section-2 theme token (--color-bg-sidebar = #16162A)
+     with a subtle vertical gradient for depth.                 */
+  background:
+    linear-gradient(180deg,
+      var(--color-bg-secondary) 0%,       /* #1C1C2E — matches navbar */
+      var(--color-bg-sidebar)   100%);    /* #16162A — deeper toward bottom */
+
+  /* Gold hairline separator + a gentle gold glow on the left
+     edge to visually tie it to the accent palette without
+     being gaudy. */
+  border-left: 1px solid rgba(201, 168, 76, 0.22);
+  box-shadow:
+    -1px 0 0 rgba(201, 168, 76, 0.08),       /* inner gold line */
+    -6px 0 28px rgba(0, 0, 0, 0.45);         /* soft drop shadow */
+
+  pointer-events: auto;
+  /* Above backdrop (z-30) so links receive taps; backdrop still closes drawer */
+  z-index: 35;
+}
+
+/* --- Desktop: always docked, no transform ------------------ */
+.cat-sidebar-panel.is-docked {
+  transform: none;
+  transition: none;
+}
+
+/* --- Mobile: slide-in behaviour ---------------------------- */
+/* Panel is translated off-screen by default; .is-open slides
+   it into view. Desktop skips this via .is-docked above.      */
+@media (max-width: 1023px) {
+  .cat-sidebar-panel:not(.is-docked) {
+    transform: translateX(100%);
+    transition: transform 0.3s ease-out;
+  }
+  .cat-sidebar-panel:not(.is-docked).is-open {
+    transform: translateX(0);
+  }
+}
+
+/* --- Header ------------------------------------------------- */
+.cat-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.18);
+}
+
+.cat-sidebar-header-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-gold);
+}
+
+.cat-sidebar-close {
+  background: rgba(201, 168, 76, 0.12);
+  border: 1px solid rgba(201, 168, 76, 0.35);
+  color: var(--color-accent-gold);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.cat-sidebar-close-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.cat-sidebar-close:hover {
+  background: rgba(201, 168, 76, 0.22);
+  color: var(--color-accent-gold-soft);
+}
+
+.cat-sidebar-close:active {
+  transform: scale(0.96);
+}
+
+/* --- Search box -------------------------------------------- */
+.cat-sidebar-search {
+  position: relative;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.18);
+}
+
+.cat-sidebar-search-input {
+  width: 100%;
+  padding: 8px 30px 8px 12px;
+  background: var(--color-bg-primary);            /* #0F0F1A — deep midnight */
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+              background-color 0.2s ease;
+}
+
+.cat-sidebar-search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.cat-sidebar-search-input:focus {
+  outline: none;
+  border-color: var(--color-accent-gold);
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.25);
+}
+
+.cat-sidebar-search-clear {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.cat-sidebar-search-clear:hover {
+  color: var(--color-accent-gold);
+}
+
+/* --- List (scroll container) ------------------------------- */
+.cat-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0 16px;
+}
+
+.cat-sidebar-list::-webkit-scrollbar { width: 6px; }
+.cat-sidebar-list::-webkit-scrollbar-track { background: transparent; }
+.cat-sidebar-list::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.35);
+  border-radius: 3px;
+}
+.cat-sidebar-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-gold);
+}
+
+/* --- Parent row -------------------------------------------- */
+.cat-sidebar-item {
+  display: block;
+  transition: opacity 0.25s ease, max-height 0.25s ease;
+}
+
+.cat-sidebar-item.is-hidden {
+  opacity: 0.25;
+}
+
+.cat-sidebar-parent {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.cat-sidebar-parent.is-active {
+  border-left-color: var(--color-accent-gold);
+  background: rgba(201, 168, 76, 0.12);
+}
+
+.cat-sidebar-parent-link {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 8px 10px 13px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(201, 168, 76, 0.2);
+  cursor: pointer;
+}
+
+.cat-sidebar-parent.is-active .cat-sidebar-parent-link {
+  color: var(--color-accent-gold);
+}
+
+.cat-sidebar-parent-link:hover {
+  color: var(--color-accent-gold-soft);
+}
+
+.cat-sidebar-toggle {
+  flex-shrink: 0;
+  width: 36px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.cat-sidebar-toggle:hover {
+  color: var(--color-accent-gold);
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.cat-sidebar-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cat-sidebar-toggle-icon {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.cat-sidebar-toggle.is-expanded .cat-sidebar-toggle-icon {
+  transform: rotate(90deg);
+}
+
+/* --- Children (accordion) ---------------------------------- */
+.cat-sidebar-children {
+  margin-left: 16px;          /* spec-required 16px indent */
+  border-left: 1px solid rgba(201, 168, 76, 0.22);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.cat-sidebar-children.is-open {
+  max-height: 1500px;
+}
+
+.cat-sidebar-child-link {
+  display: block;
+  padding: 8px 12px 8px 16px;
+  margin-left: -1px;
+  border-left: 3px solid transparent;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  transition: color 0.2s ease, background-color 0.2s ease,
+              border-color 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(201, 168, 76, 0.2);
+  cursor: pointer;
+}
+
+.cat-sidebar-child-link:hover {
+  color: var(--color-accent-gold-soft);
+  background: rgba(201, 168, 76, 0.06);
+}
+
+.cat-sidebar-child-link.is-active {
+  color: var(--color-accent-gold);
+  border-left-color: var(--color-accent-gold);
+  background: rgba(201, 168, 76, 0.12);
+}
+
+/* --- Empty / loading ---------------------------------------- */
+.cat-sidebar-status {
+  padding: 16px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* --- Layout push for desktop ------------------------------- */
+/* When <App> renders with `.has-right-sidebar` on the outer flex
+   container (non-admin routes), main + footer get right-padding
+   equal to the sidebar width on desktop.  The navbar stays full-
+   width because the sidebar only starts BELOW it.
+                                                              */
+@media (min-width: 1024px) {
+  .has-right-sidebar > main,
+  .has-right-sidebar > footer {
+    padding-right: var(--sidebar-width);
+  }
+}
+
+/* --- Mobile overlay ---------------------------------------- */
+@media (max-width: 1023px) {
+  /* On mobile, the host needs to cover the whole viewport so the
+     overlay can render over the navbar. The tab, however, should
+     still sit BELOW the navbar so it's reachable.                */
+  .cat-sidebar-host {
+    top: 0;
+    width: auto;              /* overlay is not a layout element */
+  }
+
+  .cat-sidebar-tab {
+    top: calc(var(--sidebar-top-offset) + 20px);
+    pointer-events: auto;
+    z-index: 36;
+  }
+
+  .cat-sidebar-panel {
+    width: 86vw;
+    max-width: 340px;
+    top: 0;
+    z-index: 35;
+  }
+
+  .cat-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 30;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+    /* Below panel (z-35) so category links work; still receives taps on dim area */
+  }
+
+  .cat-sidebar-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

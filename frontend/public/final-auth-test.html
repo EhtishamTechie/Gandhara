@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Auth Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Final Authentication Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Proxy URL (Development)</h3>
+        <button onclick="testProxy()">Test /api/auth/login</button>
+        <div id="proxy-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Full URL (Production)</h3>
+        <button onclick="testFull()">Test http://localhost:5000/api/auth/login</button>
+        <div id="full-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Wrong URL (Should fail)</h3>
+        <button onclick="testWrong()">Test /auth/login (should 404)</button>
+        <div id="wrong-result"></div>
+    </div>
+
+    <script>
+        const testData = {
+            email: 'admin@gandharaofficial.org',
+            password: 'Admin@2025!'
+        };
+
+        async function testAuth(url, resultId, description) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = `<p>Testing ${description}...</p>`;
+            
+            console.log(`\n🧪 Testing: ${description}`);
+            console.log('URL:', url);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response URL:', response.url);
+                
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                const statusClass = response.ok ? 'success' : 'error';
+                resultDiv.innerHTML = `
+                    <div class="${statusClass}">
+                        <h4>${description} Results:</h4>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Actual URL:</strong> ${response.url}</p>
+                        <p><strong>Success:</strong> ${result.success}</p>
+                        <p><strong>Message:</strong> ${result.message}</p>
+                        ${result.token ? `<p><strong>Token Received:</strong> ✅ (${result.token.length} chars)</p>` : ''}
+                        ${result.admin ? `<p><strong>Admin Data:</strong> ${result.admin.email}</p>` : ''}
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>${description} - ERROR</h4>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function testProxy() {
+            testAuth('/api/auth/login', 'proxy-result', 'Proxy URL');
+        }
+
+        function testFull() {
+            testAuth('http://localhost:5000/api/auth/login', 'full-result', 'Full URL');
+        }
+
+        function testWrong() {
+            testAuth('/auth/login', 'wrong-result', 'Wrong URL');
+        }
+    </script>
+</body>
+</html>

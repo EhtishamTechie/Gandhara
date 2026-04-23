@@ -1,0 +1,122 @@
+/* ============================================================
+ * theme.css — Gandhara Arts global design tokens (2026-04)
+ *
+ * Defines the complete color palette from the redesign spec.
+ * Exposed in TWO ways on purpose:
+ *
+ *   1. :root { --color-... }
+ *      Plain CSS custom properties usable anywhere via
+ *      var(--color-accent-gold). This is the primary contract.
+ *
+ *   2. @theme { --color-... }
+ *      Tailwind v4 theme tokens. This makes utility classes
+ *      like `bg-accent-gold`, `text-text-primary`, `border-border`
+ *      work automatically (Tailwind v4 generates utilities from
+ *      @theme entries). Existing Tailwind usage is unaffected.
+ *
+ * NOTHING in this file forces a global background/foreground
+ * yet — that is applied per-component as each section of the
+ * redesign is rolled out.
+ * ============================================================ */
+
+:root {
+  /* Backgrounds */
+  --color-bg-primary:      #0F0F1A;   /* deep midnight (page) */
+  --color-bg-secondary:    #1C1C2E;   /* deep navy (cards, navbar) */
+  --color-bg-card:         #1E1E30;   /* product cards */
+  --color-bg-sidebar:      #16162A;   /* right-side category sidebar */
+  --color-bg-footer:       #0A0A14;   /* footer */
+
+  /* Accents */
+  --color-accent-gold:      #C9A84C;   /* primary accent */
+  --color-accent-gold-dark: #8B6914;   /* hover state */
+  --color-accent-gold-soft: #D4B96A;   /* subtle highlights */
+
+  /* Text */
+  --color-text-primary:   #F5F0E8;   /* warm off-white */
+  --color-text-secondary: #A89880;   /* muted warm grey */
+  --color-text-muted:     #6B6B80;   /* disabled / placeholder */
+
+  /* Borders */
+  --color-border:         #2E2E45;   /* card borders */
+  --color-border-active:  #C9A84C;   /* focused / active */
+
+  /* Status */
+  --color-success:        #4CAF82;   /* in-stock badge */
+
+  /* Shadows */
+  --color-shadow:         rgba(201, 168, 76, 0.15);  /* gold glow */
+
+  /* Legacy alias — Footer.jsx references "brand-gold" via classes
+     like bg-brand-gold, border-brand-gold. Previously undefined
+     (no-op). Aliased to the new accent so those styles activate. */
+  --color-brand-gold:     #C9A84C;
+}
+
+/* ------------------------------------------------------------
+ * Tailwind v4 theme registration
+ * Makes utility classes like `bg-accent-gold`, `text-text-primary`,
+ * `border-border`, `shadow-gold` available site-wide.
+ * ------------------------------------------------------------ */
+@theme {
+  --color-bg-primary:      #0F0F1A;
+  --color-bg-secondary:    #1C1C2E;
+  --color-bg-card:         #1E1E30;
+  --color-bg-sidebar:      #16162A;
+  --color-bg-footer:       #0A0A14;
+
+  --color-accent-gold:      #C9A84C;
+  --color-accent-gold-dark: #8B6914;
+  --color-accent-gold-soft: #D4B96A;
+
+  --color-text-primary:   #F5F0E8;
+  --color-text-secondary: #A89880;
+  --color-text-muted:     #6B6B80;
+
+  --color-border:         #2E2E45;
+  --color-border-active:  #C9A84C;
+
+  --color-success:        #4CAF82;
+
+  --color-brand-gold:     #C9A84C;
+}
+
+/* ------------------------------------------------------------
+ * Global behaviours (Section 8 prerequisites)
+ *  - smooth in-page scroll
+ *  - visible, branded focus rings for keyboard users only
+ *  - respect prefers-reduced-motion for users who opt out
+ * ------------------------------------------------------------ */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Keyboard-only focus ring in gold. Mouse clicks are unaffected
+   because we only target :focus-visible, not :focus. */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Disable the default focus ring on mouse clicks for elements
+   that already provide their own hover/active treatment. */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}

@@ -1,0 +1,20 @@
+const ProductCard = ({ product, index, onClick, searchTerm }) => {
+  return (
+    <div
+      onClick={() => onClick(product)}
+      className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+    >
+      <img
+        src={product.image}
+        alt={product.title}
+        className="w-full h-64 object-cover"
+      />
+      <div className="p-6">
+        <h3 className="text-lg font-semibold text-slate-900">{product.title}</h3>
+        <p className="mt-2 text-slate-600">{product.description}</p>
+      </div>
+    </div>
+  );
+};
+
+export default ProductCard;

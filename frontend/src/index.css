@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@import "./styles/theme.css";
+@import "./styles/navbar.css";
+@import "./styles/animations.css";
+
+/* Hover effect utilities */
+.hover-scale {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.hover-scale:active {
+  transform: scale(0.98);
+}
+
+/* Image Protection Styles */
+img {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
+/* Print styles - show placeholder instead of hiding images completely */
+@media print {
+  img {
+    opacity: 0.3 !important;
+    filter: grayscale(1) !important;
+  }
+}
+
+/* Disable iOS callout on images */
+img {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Disable text selection on image containers */
+.product-image-container,
+.product-card,
+.product-detail {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Diagonal watermark text via CSS pseudo-element (reduces DOM nodes) */
+.watermarked-container::after {
+  content: 'GANDHARA ARTS\\A TAXILA STONE CRAFTS.COM';
+  white-space: pre;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: clamp(14px, 2vw, 18px);
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  transform: rotate(12deg);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+}

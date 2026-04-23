@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Auth Test</title>
+</head>
+<body>
+    <h1>Authentication Debug Test</h1>
+    <button id="testAuthFull">Test Full URL</button>
+    <button id="testAuthProxy">Test Proxy URL</button>
+    <div id="result"></div>
+
+    <script>
+        async function testUrl(urlType, url) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<p>Testing ${urlType}...</p>`;
+            
+            console.log(`🔍 Frontend ${urlType} Test Starting...`);
+            console.log('Current location:', window.location.href);
+            
+            const testData = {
+                email: 'admin@gandharaofficial.org',
+                password: 'Admin@2025!'
+            };
+            
+            console.log('URL being called:', url);
+            console.log('Data being sent:', testData);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response URL:', response.url);
+                
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                resultDiv.innerHTML = `
+                    <h3>${urlType} Results:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>URL Called:</strong> ${response.url}</p>
+                    <p><strong>Success:</strong> ${result.success}</p>
+                    <p><strong>Message:</strong> ${result.message}</p>
+                    ${result.token ? `<p><strong>Token:</strong> ${result.token.substring(0, 50)}...</p>` : ''}
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p style="color: red;">${urlType} Error: ${error.message}</p>`;
+            }
+        }
+
+        document.getElementById('testAuthFull').addEventListener('click', () => {
+            testUrl('Full URL', 'http://localhost:5000/api/auth/login');
+        });
+
+        document.getElementById('testAuthProxy').addEventListener('click', () => {
+            testUrl('Proxy URL', '/api/auth/login');
+        });
+    </script>
+</body>
+</html>

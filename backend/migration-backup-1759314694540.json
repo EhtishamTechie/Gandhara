@@ -1,0 +1,201 @@
+{
+  "timestamp": "2025-10-01T10:31:34.536Z",
+  "products": [
+    {
+      "metaKeywords": [],
+      "seoScore": 0,
+      "isActive": true,
+      "isFeatured": false,
+      "viewCount": 0,
+      "_id": "685f68062805dee7541660ca",
+      "title": "hand",
+      "keywords": [
+        "[\"gandhara\"]"
+      ],
+      "description": "detailed ",
+      "price": 199,
+      "image": "uploads\\1751083014154.jpeg",
+      "categories": [
+        "Gandhara Art"
+      ],
+      "createdAt": "2025-06-28T03:56:54.201Z",
+      "updatedAt": "2025-06-28T03:56:54.201Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.529Z"
+    },
+    {
+      "metaKeywords": [],
+      "seoScore": 0,
+      "isActive": true,
+      "isFeatured": false,
+      "viewCount": 0,
+      "_id": "685f68332805dee7541660d6",
+      "title": "hand",
+      "keywords": [
+        "[\"faghmd\"]"
+      ],
+      "description": "deailed",
+      "price": 199,
+      "image": "uploads\\1751083059757.jpeg",
+      "categories": [
+        "Antique Products",
+        "Salt"
+      ],
+      "createdAt": "2025-06-28T03:57:39.788Z",
+      "updatedAt": "2025-06-28T03:57:39.788Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.530Z"
+    },
+    {
+      "metaKeywords": [],
+      "seoScore": 0,
+      "isActive": true,
+      "isFeatured": false,
+      "viewCount": 0,
+      "_id": "686f277f42ba1c013d81137e",
+      "title": "Coin",
+      "keywords": [
+        "[\"gandhara\"]"
+      ],
+      "description": "detailed descripyti",
+      "price": 19.99,
+      "image": "uploads\\1752115071670.jpeg",
+      "categories": [
+        "Coin"
+      ],
+      "createdAt": "2025-07-10T02:37:51.700Z",
+      "updatedAt": "2025-07-10T02:37:51.700Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.530Z"
+    },
+    {
+      "metaKeywords": [],
+      "seoScore": 0,
+      "isActive": true,
+      "isFeatured": false,
+      "viewCount": 0,
+      "_id": "686f2ad242ba1c013d8113ab",
+      "title": "kuch bhi",
+      "keywords": [
+        "[\"00.00\"]"
+      ],
+      "description": "detailed description",
+      "price": 199.99,
+      "image": "uploads\\1752115922274.jpeg",
+      "categories": [
+        "Gandhara Art",
+        "Antique Products"
+      ],
+      "createdAt": "2025-07-10T02:52:02.282Z",
+      "updatedAt": "2025-07-10T02:52:02.282Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.531Z"
+    },
+    {
+      "metaKeywords": [],
+      "seoScore": 0,
+      "isActive": true,
+      "isFeatured": false,
+      "viewCount": 0,
+      "_id": "686f2b0142ba1c013d8113ad",
+      "title": "ruiop",
+      "keywords": [
+        "[\"00\"]"
+      ],
+      "description": "fdghjk",
+      "price": 99,
+      "image": "uploads\\1752115969536.jpeg",
+      "categories": [
+        "featuredProducts"
+      ],
+      "createdAt": "2025-07-10T02:52:49.557Z",
+      "updatedAt": "2025-07-10T02:52:49.557Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.531Z"
+    },
+    {
+      "metaKeywords": [],
+      "seoScore": 0,
+      "isActive": true,
+      "isFeatured": false,
+      "viewCount": 0,
+      "_id": "686f2b5b42ba1c013d8113b8",
+      "title": "next",
+      "keywords": [
+        "[\"00\"]"
+      ],
+      "description": "vbcn",
+      "price": 0,
+      "image": "uploads\\1752116059328.jpeg",
+      "categories": [
+        "featuredProducts"
+      ],
+      "createdAt": "2025-07-10T02:54:19.336Z",
+      "updatedAt": "2025-07-10T02:54:19.336Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.532Z"
+    }
+  ],
+  "visitPlaces": [
+    {
+      "location": {
+        "coordinates": [],
+        "country": "Pakistan"
+      },
+      "metaKeywords": [],
+      "attractions": [],
+      "seoScore": 0,
+      "isActive": true,
+      "_id": "6870b507b3051a3f620e03fe",
+      "name": "gshj",
+      "description": "detailed ",
+      "image": "uploads\\1752216839248.jpeg",
+      "createdAt": "2025-07-11T06:53:59.274Z",
+      "updatedAt": "2025-07-11T06:53:59.274Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.535Z"
+    },
+    {
+      "location": {
+        "coordinates": [],
+        "country": "Pakistan"
+      },
+      "metaKeywords": [],
+      "attractions": [],
+      "seoScore": 0,
+      "isActive": true,
+      "_id": "688a48af57f7762c772cd13b",
+      "name": "nbm,",
+      "description": "fjk",
+      "tourCategory": "Cultural",
+      "mediaType": "video",
+      "image": null,
+      "video": "uploads\\videos\\video-1753893039020-768920042.mp4",
+      "createdAt": "2025-07-30T16:30:39.963Z",
+      "updatedAt": "2025-07-30T16:30:39.963Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.536Z"
+    },
+    {
+      "location": {
+        "coordinates": [],
+        "country": "Pakistan"
+      },
+      "metaKeywords": [],
+      "attractions": [],
+      "seoScore": 0,
+      "isActive": true,
+      "_id": "688a497457f7762c772cd142",
+      "name": "video",
+      "description": "featured",
+      "tourCategory": "Featured",
+      "mediaType": "video",
+      "image": null,
+      "video": "uploads\\videos\\video-1753893235935-910787345.mp4",
+      "createdAt": "2025-07-30T16:33:56.890Z",
+      "updatedAt": "2025-07-30T16:33:56.890Z",
+      "__v": 0,
+      "lastSEOUpdate": "2025-10-01T10:31:34.536Z"
+    }
+  ]
+}

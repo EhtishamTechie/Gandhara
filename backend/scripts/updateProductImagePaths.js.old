@@ -1,0 +1,68 @@
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/gandhara');
+
+const Product = mongoose.model('Product', new mongoose.Schema({
+  image: String,
+  images: [String],
+  title: String,
+}));
+
+async function updateImagePaths() {
+  console.log('🔄 Updating product image paths to use AVIF...\n');
+  
+  let updated = 0;
+  let skipped = 0;
+  
+  const products = await Product.find({
+    image: { $regex: /\.(jpg|jpeg|png)$/i }
+  });
+  
+  console.log(`Found ${products.length} products with JPG/PNG images\n`);
+  
+  for (const product of products) {
+    let changed = false;
+    
+    // Update main image to AVIF
+    if (product.image && /\.(jpg|jpeg|png)$/i.test(product.image)) {
+      const newImage = product.image.replace(/\.(jpg|jpeg|png)$/i, '.avif');
+      
+      // Check if AVIF version exists by trying to get product with that path
+      product.image = newImage;
+      changed = true;
+      console.log(`  ✅ ${product.title?.substring(0, 50)}`);
+      console.log(`     ${product.image}`);
+    }
+    
+    // Update images array
+    if (product.images && product.images.length > 0) {
+      product.images = product.images.map(img => {
+        if (/\.(jpg|jpeg|png)$/i.test(img)) {
+          changed = true;
+          return img.replace(/\.(jpg|jpeg|png)$/i, '.avif');
+        }
+        return img;
+      });
+    }
+    
+    if (changed) {
+      await product.save();
+      updated++;
+    } else {
+      skipped++;
+    }
+  }
+  
+  console.log(`\n✨ Complete!`);
+  console.log(`   Updated: ${updated} products`);
+  console.log(`   Skipped: ${skipped} products`);
+  
+  await mongoose.disconnect();
+}
+
+updateImagePaths().catch(err => {
+  console.error('Error:', err);
+  process.exit(1);
+});
