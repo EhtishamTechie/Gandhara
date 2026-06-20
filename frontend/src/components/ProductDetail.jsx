@@ -21,7 +21,7 @@ import {
 import SEOHead from './SEOHead';
 import { getImageUrl } from '../utils/imageHelper';
 import { buildProductWhatsAppUrl } from '../utils/whatsappHelper';
-import Breadcrumbs from './Breadcrumbs';
+
 
 // Shared image path helper for product pages
 const getImagePath = (imageName) => {
@@ -352,16 +352,7 @@ const ProductDetail = () => {
     "category": product.categories?.[0] || "Stone Craft"
   };
 
-  // Generate breadcrumb items
-  const breadcrumbItems = [
-    { name: 'Home', url: '/' },
-    { name: 'Products', url: '/products' },
-    ...(product.categories?.[0] 
-      ? [{ name: product.categories[0], url: `/category/${product.categories[0].toLowerCase().replace(/\s+/g, '-')}` }]
-      : []
-    ),
-    { name: product.title } // Current page - no URL
-  ];
+
 
   return (
     <>
@@ -383,8 +374,7 @@ const ProductDetail = () => {
       
       <div className="bg-[#0F172A] min-h-screen">
         <div className="container mx-auto max-w-7xl px-4 py-8">
-        {/* Breadcrumb Navigation with Schema */}
-        <Breadcrumbs items={breadcrumbItems} />
+
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Product Images */}
