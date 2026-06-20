@@ -90,18 +90,18 @@
 /* ---- WhatsApp circular button (bottom-right of image) --------- */
 .pc-whatsapp {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 8px;
+  bottom: 8px;
   z-index: 4;
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: #25D366; /* Brand green — universal */
   color: #FFFFFF;
-  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  box-shadow: 0 2px 7px rgba(37, 211, 102, 0.35);
   transition:
     transform 200ms ease,
     box-shadow 200ms ease,

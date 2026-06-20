@@ -188,11 +188,7 @@ const ProductCard = memo(function ProductCard({
           />
         </div>
 
-        {category && (
-          <span className="pc-category" title={category}>
-            {category}
-          </span>
-        )}
+
 
         <a
           href={waLink(product)}
@@ -203,7 +199,7 @@ const ProductCard = memo(function ProductCard({
           aria-label={`Inquire about ${title} on WhatsApp`}
           title="Inquire on WhatsApp"
         >
-          <WhatsAppIcon size={16} />
+          <WhatsAppIcon size={8} />
         </a>
 
         <button
