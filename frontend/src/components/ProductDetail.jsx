@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import '../styles/animations.css';
 import './ProductDetailStrip.css';
@@ -204,146 +204,6 @@ const ImageGallery = ({ images, productTitle }) => {
   );
 };
 
-// Category Products Horizontal Scroll Strip
-const CategoryProductsStrip = ({ currentProductId, categories }) => {
-  const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const scrollRef = useRef(null);
-
-  // Fetch sibling products from the same category
-  useEffect(() => {
-    if (!categories || categories.length === 0) return;
-    const categorySlug = categories[0];
-    const fetchSiblings = async () => {
-      setLoading(true);
-      try {
-        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await axios.get(`${API_BASE}/api/products/category/${encodeURIComponent(categorySlug)}`);
-        const all = Array.isArray(res.data) ? res.data : (res.data.products || []);
-        // Exclude the current product
-        setProducts(all.filter(p => p._id !== currentProductId));
-      } catch (err) {
-        console.error('Category strip fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSiblings();
-  }, [categories, currentProductId]);
-
-  // Update arrow visibility
-  const updateArrows = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    updateArrows();
-    el.addEventListener('scroll', updateArrows, { passive: true });
-    const ro = new ResizeObserver(updateArrows);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener('scroll', updateArrows);
-      ro.disconnect();
-    };
-  }, [products, updateArrows]);
-
-  const SCROLL_AMOUNT = 320;
-  const scrollLeft = () => scrollRef.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: 'smooth' });
-  const scrollRight = () => scrollRef.current?.scrollBy({ left: SCROLL_AMOUNT, behavior: 'smooth' });
-
-  if (loading) {
-    return (
-      <div className="mt-12 pt-8 border-t border-[#1E293B]">
-        <div className="h-6 w-48 bg-[#1E293B] rounded animate-pulse mb-6" />
-        <div className="flex space-x-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-48 h-64 bg-[#1E293B] rounded-xl animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!products.length) return null;
-
-  return (
-    <div className="mt-12 pt-8 border-t border-[#1E293B]">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-[#F8FAFC]">
-          More from this category
-        </h2>
-        <div className="flex items-center space-x-2">
-          {/* Arrow buttons — always visible on mobile, fade-in on desktop */}
-          <button
-            onClick={scrollLeft}
-            disabled={!canScrollLeft}
-            aria-label="Scroll left"
-            className={`cat-strip-arrow ${
-              canScrollLeft ? 'cat-strip-arrow--active' : 'cat-strip-arrow--disabled'
-            }`}
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={scrollRight}
-            disabled={!canScrollRight}
-            aria-label="Scroll right"
-            className={`cat-strip-arrow ${
-              canScrollRight ? 'cat-strip-arrow--active' : 'cat-strip-arrow--disabled'
-            }`}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Scroll container */}
-      <div className="cat-strip-wrapper">
-        <div
-          ref={scrollRef}
-          className="cat-strip-scroll"
-        >
-          {products.map((p) => {
-            const imgSrc = getImagePath(p.image || (Array.isArray(p.images) ? p.images[0] : null));
-            const href = `/product/${p.slug || p._id}`;
-            return (
-              <button
-                key={p._id}
-                className="cat-strip-card"
-                onClick={() => navigate(href)}
-                aria-label={p.seoTitle || p.title}
-              >
-                <div className="cat-strip-card__img-wrap">
-                  <OptimizedImage
-                    src={imgSrc}
-                    alt={p.seoTitle || p.title}
-                    width={300}
-                    height={300}
-                    className="cat-strip-card__img"
-                    objectFit="cover"
-                    lazy
-                    onError={(e) => { e.target.onerror = null; e.target.src = '/GandharaImages/Gandharalogo.webp'; }}
-                  />
-                </div>
-                <div className="cat-strip-card__body">
-                  <p className="cat-strip-card__title">{p.seoTitle || p.title}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
   <div className="flex items-start space-x-3 p-4 bg-[#1E293B] rounded-lg">
@@ -367,15 +227,17 @@ const ProductDetail = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
 
+  // Category siblings for prev/next navigation
+  const [categoryProducts, setCategoryProducts] = useState([]);
+  const mainSectionRef = useRef(null);
+  const touchStartX = useRef(null);
+
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        // Use direct API URL like admin pages
         const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const apiUrl = `${API_BASE_URL}/api/products/${productId}`;
-
-        const response = await axios.get(apiUrl);
+        const response = await axios.get(`${API_BASE_URL}/api/products/${productId}`);
         setProduct(response.data);
         setError(null);
       } catch (err) {
@@ -385,11 +247,47 @@ const ProductDetail = () => {
         setLoading(false);
       }
     };
-
-    if (productId) {
-      fetchProduct();
-    }
+    if (productId) fetchProduct();
   }, [productId]);
+
+  // Fetch category siblings for prev/next navigation
+  useEffect(() => {
+    if (!product) return;
+    const cats = product.categories || (product.category ? [product.category] : []);
+    if (!cats.length) return;
+    const slug = cats[0];
+    const fetchSiblings = async () => {
+      try {
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await axios.get(`${API_BASE}/api/products/category/${encodeURIComponent(slug)}`);
+        const all = Array.isArray(res.data) ? res.data : (res.data.products || []);
+        setCategoryProducts(all);
+      } catch { /* silent */ }
+    };
+    fetchSiblings();
+  }, [product]);
+
+  // Derived prev/next from categoryProducts
+  const currentCatIndex = categoryProducts.findIndex(p => p._id === product?._id);
+  const prevProduct = currentCatIndex > 0 ? categoryProducts[currentCatIndex - 1] : null;
+  const nextProduct = currentCatIndex >= 0 && currentCatIndex < categoryProducts.length - 1
+    ? categoryProducts[currentCatIndex + 1]
+    : null;
+
+  const goToPrev = () => prevProduct && navigate(`/product/${prevProduct.slug || prevProduct._id}`);
+  const goToNext = () => nextProduct && navigate(`/product/${nextProduct.slug || nextProduct._id}`);
+
+  // Touch swipe handlers (mobile)
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(delta) > 60) {
+      if (delta > 0) goToNext();
+      else goToPrev();
+    }
+    touchStartX.current = null;
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -513,8 +411,41 @@ const ProductDetail = () => {
       <div className="bg-[#0F172A] min-h-screen">
         <div className="container mx-auto max-w-7xl px-4 py-8">
 
+          {/* ── Category nav arrows ── */}
+          <div
+            ref={mainSectionRef}
+            className="pd-nav-wrap"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Left arrow */}
+            <button
+              onClick={goToPrev}
+              disabled={!prevProduct}
+              aria-label="Previous product"
+              className={`pd-nav-arrow pd-nav-arrow--left ${prevProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'}`}
+            >
+              <ChevronLeft size={22} />
+            </button>
 
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+            {/* Right arrow */}
+            <button
+              onClick={goToNext}
+              disabled={!nextProduct}
+              aria-label="Next product"
+              className={`pd-nav-arrow pd-nav-arrow--right ${nextProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'}`}
+            >
+              <ChevronRight size={22} />
+            </button>
+
+            {/* Position indicator */}
+            {categoryProducts.length > 1 && currentCatIndex >= 0 && (
+              <div className="pd-nav-indicator">
+                {currentCatIndex + 1} / {categoryProducts.length}
+              </div>
+            )}
+
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Product Images */}
             <div className="lg:sticky lg:top-8 lg:self-start">
               <ImageGallery
@@ -639,7 +570,8 @@ const ProductDetail = () => {
                 </div>
               </div>
             </div>
-          </div>
+            </div>{/* end grid lg:grid-cols-2 */}
+          </div>{/* end pd-nav-wrap */}
 
           {/* Back Button */}
           <div className="mt-8">
@@ -651,12 +583,6 @@ const ProductDetail = () => {
               <span>Back to Products</span>
             </button>
           </div>
-
-          {/* Category Products Horizontal Strip */}
-          <CategoryProductsStrip
-            currentProductId={product._id}
-            categories={product.categories || (product.category ? [product.category] : [])}
-          />
         </div>
       </div>
     </>
