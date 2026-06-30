@@ -38,11 +38,11 @@ import './CategorySidebar.css';
  */
 
 const DESKTOP_MQ = '(min-width: 1024px)';
-const LS_COLLAPSED_KEY = 'gandhara.sidebar.collapsed';
+const LS_EXPANDED_KEY = 'gandhara.sidebar.expanded';
 
-const readCollapsedSet = () => {
+const readExpandedSet = () => {
   try {
-    const raw = localStorage.getItem(LS_COLLAPSED_KEY);
+    const raw = localStorage.getItem(LS_EXPANDED_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
     return new Set(Array.isArray(arr) ? arr : []);
@@ -67,8 +67,8 @@ const CategorySidebar = () => {
   // Mobile-only: is the overlay open?
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Per-parent collapsed set (persisted). Absence = expanded (default).
-  const [collapsedSet, setCollapsedSet] = useState(readCollapsedSet);
+  // Per-parent expanded set (persisted). Absence = collapsed (default).
+  const [expandedSet, setExpandedSet] = useState(readExpandedSet);
 
   const [search, setSearch] = useState('');
   const searchInputRef = useRef(null);
@@ -85,19 +85,19 @@ const CategorySidebar = () => {
     return () => mq.removeEventListener?.('change', onChange);
   }, []);
 
-  // ---- persist the collapsed set ----
-  const writeCollapsed = (set) => {
+  // ---- persist the expanded set ----
+  const writeExpanded = (set) => {
     try {
-      localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify(Array.from(set)));
+      localStorage.setItem(LS_EXPANDED_KEY, JSON.stringify(Array.from(set)));
     } catch { /* ignore quota */ }
   };
 
-  const toggleCollapse = (parentSlug) => {
-    setCollapsedSet((prev) => {
+  const toggleExpand = (parentSlug) => {
+    setExpandedSet((prev) => {
       const next = new Set(prev);
       if (next.has(parentSlug)) next.delete(parentSlug);
       else next.add(parentSlug);
-      writeCollapsed(next);
+      writeExpanded(next);
       return next;
     });
   };
@@ -112,15 +112,15 @@ const CategorySidebar = () => {
     return { activeParentSlug: parentSlug, activeSubSlug: subSlug };
   }, [location.pathname, location.search]);
 
-  // If the user navigates to a category they had collapsed, force it
+  // If the user navigates to a category that is collapsed, force it
   // open so the active item is visible.
   useEffect(() => {
     if (!activeParentSlug) return;
-    setCollapsedSet((prev) => {
-      if (!prev.has(activeParentSlug)) return prev;
+    setExpandedSet((prev) => {
+      if (prev.has(activeParentSlug)) return prev;
       const next = new Set(prev);
-      next.delete(activeParentSlug);
-      writeCollapsed(next);
+      next.add(activeParentSlug);
+      writeExpanded(next);
       return next;
     });
   }, [activeParentSlug]);
@@ -277,10 +277,9 @@ const CategorySidebar = () => {
             const hasChildren = (parent.children?.length || 0) > 0;
             const isParentActive = activeParentSlug === parent.slug;
 
-            // Default = expanded.  User-collapsed = in collapsedSet.
+            // Default = collapsed.  User-expanded = in expandedSet.
             // While searching, ALWAYS show children so results are visible.
-            const userCollapsed = collapsedSet.has(parent.slug);
-            const isExpanded = isSearching ? true : !userCollapsed;
+            const isExpanded = isSearching ? true : expandedSet.has(parent.slug);
 
             return (
               <div
@@ -307,9 +306,9 @@ const CategorySidebar = () => {
                         ? `Collapse ${parent.name}`
                         : `Expand ${parent.name}`}
                       aria-expanded={isExpanded}
-                      onClick={() => toggleCollapse(parent.slug)}
+                      onClick={() => toggleExpand(parent.slug)}
                       disabled={isSearching}
-                      title={isSearching ? 'Clear search to collapse branches' : undefined}
+                      title={isSearching ? 'Clear search to expand branches' : undefined}
                     >
                       <span className="cat-sidebar-toggle-icon">▶</span>
                     </button>
