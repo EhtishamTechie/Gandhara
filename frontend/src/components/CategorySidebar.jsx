@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { XMarkIcon } from '@heroicons/react/20/solid';
+import { XMarkIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import { useCategoryTree } from '../hooks/useApi';
 import './CategorySidebar.css';
 
@@ -310,7 +310,7 @@ const CategorySidebar = () => {
                       disabled={isSearching}
                       title={isSearching ? 'Clear search to expand branches' : undefined}
                     >
-                      <span className="cat-sidebar-toggle-icon">▶</span>
+                      <ChevronRightIcon className="cat-sidebar-toggle-icon" aria-hidden />
                     </button>
                   )}
                 </div>
