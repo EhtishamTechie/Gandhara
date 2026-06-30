@@ -250,21 +250,26 @@ const ProductDetail = () => {
     if (productId) fetchProduct();
   }, [productId]);
 
-  // Fetch category siblings for prev/next navigation
+  // Fetch a lightweight category list for prev/next navigation.
+  // Only IDs + slugs are needed — full product data and images are
+  // fetched fresh when the user actually navigates to a product.
+  // A limit of 50 covers most categories in one fast, small request.
   useEffect(() => {
     if (!product) return;
     const cats = product.categories || (product.category ? [product.category] : []);
     if (!cats.length) return;
     const slug = cats[0];
-    const fetchSiblings = async () => {
+    const fetchNavList = async () => {
       try {
         const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await axios.get(`${API_BASE}/api/products/category/${encodeURIComponent(slug)}`);
-        const all = Array.isArray(res.data) ? res.data : (res.data.products || []);
-        setCategoryProducts(all);
-      } catch { /* silent */ }
+        const res = await axios.get(
+          `${API_BASE}/api/products/category/${encodeURIComponent(slug)}?limit=50`
+        );
+        const list = Array.isArray(res.data) ? res.data : (res.data.products || []);
+        setCategoryProducts(list);
+      } catch { /* silent — arrows simply won't appear */ }
     };
-    fetchSiblings();
+    fetchNavList();
   }, [product]);
 
   // Derived prev/next from categoryProducts
@@ -274,8 +279,9 @@ const ProductDetail = () => {
     ? categoryProducts[currentCatIndex + 1]
     : null;
 
-  const goToPrev = () => prevProduct && navigate(`/product/${prevProduct.slug || prevProduct._id}`);
-  const goToNext = () => nextProduct && navigate(`/product/${nextProduct.slug || nextProduct._id}`);
+  // Navigate using replace:true so Back button returns to the listing, not a previous product
+  const goToPrev = () => prevProduct && navigate(`/product/${prevProduct.slug || prevProduct._id}`, { replace: true });
+  const goToNext = () => nextProduct && navigate(`/product/${nextProduct.slug || nextProduct._id}`, { replace: true });
 
   // Touch swipe handlers (mobile)
   const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
@@ -415,47 +421,70 @@ const ProductDetail = () => {
           <div
             ref={mainSectionRef}
             className="pd-nav-wrap"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
           >
-            {/* Left arrow */}
+            {/* Desktop-only floating arrows (hidden on mobile via CSS) */}
             <button
               onClick={goToPrev}
               disabled={!prevProduct}
               aria-label="Previous product"
-              className={`pd-nav-arrow pd-nav-arrow--left ${prevProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'}`}
+              className={`pd-nav-arrow pd-nav-arrow--left pd-nav-arrow--desktop ${
+                prevProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'
+              }`}
             >
               <ChevronLeft size={22} />
             </button>
-
-            {/* Right arrow */}
             <button
               onClick={goToNext}
               disabled={!nextProduct}
               aria-label="Next product"
-              className={`pd-nav-arrow pd-nav-arrow--right ${nextProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'}`}
+              className={`pd-nav-arrow pd-nav-arrow--right pd-nav-arrow--desktop ${
+                nextProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'
+              }`}
             >
               <ChevronRight size={22} />
             </button>
 
-            {/* Position indicator */}
-            {categoryProducts.length > 1 && currentCatIndex >= 0 && (
-              <div className="pd-nav-indicator">
-                {currentCatIndex + 1} / {categoryProducts.length}
-              </div>
-            )}
-
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Product Images */}
-            <div className="lg:sticky lg:top-8 lg:self-start">
-              <ImageGallery
-                images={product.image || product.images}
-                productTitle={product.seoTitle || product.title}
-              />
-            </div>
+              {/* Product Images — swipe target on mobile */}
+              <div
+                className="lg:sticky lg:top-8 lg:self-start"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                <ImageGallery
+                  images={product.image || product.images}
+                  productTitle={product.seoTitle || product.title}
+                />
+              </div>
 
-            {/* Product Information */}
-            <div className="space-y-6">
+              {/* Mobile-only arrow bar: sits between image and text */}
+              <div className="pd-mobile-arrow-bar lg:hidden">
+                <button
+                  onClick={goToPrev}
+                  disabled={!prevProduct}
+                  aria-label="Previous product"
+                  className={`pd-mobile-arrow ${
+                    prevProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
+                  }`}
+                >
+                  <ChevronLeft size={20} />
+                  <span className="pd-mobile-arrow__label">Prev</span>
+                </button>
+                <button
+                  onClick={goToNext}
+                  disabled={!nextProduct}
+                  aria-label="Next product"
+                  className={`pd-mobile-arrow ${
+                    nextProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
+                  }`}
+                >
+                  <span className="pd-mobile-arrow__label">Next</span>
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+
+              {/* Product Information */}
+              <div className="space-y-6">
               {/* Header */}
               <div>
                 <div className="flex items-start justify-between mb-4">

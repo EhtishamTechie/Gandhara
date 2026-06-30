@@ -1,14 +1,16 @@
 /* ============================================================
  * ProductDetailStrip.css
- * Category prev/next arrow navigation for ProductDetail page
+ * Category prev/next navigation for ProductDetail page
  * ============================================================ */
 
-/* ── Wrapper: establishes stacking context for floating arrows ── */
+/* ── Wrapper: stacking context for floating desktop arrows ─── */
 .pd-nav-wrap {
   position: relative;
 }
 
-/* ── Floating arrow buttons ──────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   DESKTOP FLOATING ARROWS  (hidden on mobile)
+   ══════════════════════════════════════════════════════════ */
 .pd-nav-arrow {
   position: absolute;
   top: 50%;
@@ -41,10 +43,7 @@
 .pd-nav-arrow--left  { left:  -22px; }
 .pd-nav-arrow--right { right: -22px; }
 
-/* Active state */
-.pd-nav-arrow--active {
-  opacity: 1;
-}
+.pd-nav-arrow--active { opacity: 1; }
 
 .pd-nav-arrow--active:hover {
   background: rgba(201, 168, 76, 0.18);
@@ -56,59 +55,75 @@
   transform: translateY(-50%) scale(0.96);
 }
 
-/* Hidden (no prev / no next) */
 .pd-nav-arrow--hidden {
   opacity: 0.2;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-/* ── Position indicator  "3 / 24" ───────────────────────────── */
-.pd-nav-indicator {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+/* Hide desktop arrows on mobile — mobile gets its own bar below */
+@media (max-width: 1023px) {
+  .pd-nav-arrow--desktop {
+    display: none;
+  }
+}
 
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(201, 168, 76, 0.25);
-  border-radius: 20px;
-  padding: 3px 12px;
+/* Tablet: flush with container edges */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .pd-nav-arrow--left  { left:  0; }
+  .pd-nav-arrow--right { right: 0; }
+  .pd-nav-arrow--desktop { display: inline-flex; } /* show on tablet */
+}
 
-  font-size: 0.78rem;
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE ARROW BAR
+   Rendered between the image and the product text.
+   Only visible below lg breakpoint (lg:hidden in JSX).
+   ══════════════════════════════════════════════════════════ */
+.pd-mobile-arrow-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 4px;
+  /* spans full grid column width */
+  grid-column: 1 / -1;
+}
+
+.pd-mobile-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  background: rgba(30, 41, 59, 0.9);
+  color: #F1C27D;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: rgba(241, 194, 125, 0.85);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+.pd-mobile-arrow--active:hover,
+.pd-mobile-arrow--active:active {
+  background: rgba(201, 168, 76, 0.15);
+  border-color: rgba(201, 168, 76, 0.6);
+  transform: scale(0.97);
+}
+
+.pd-mobile-arrow--faint {
+  opacity: 0.22;
+  cursor: not-allowed;
   pointer-events: none;
 }
 
-/* ── Mobile adjustments ──────────────────────────────────────── */
-@media (max-width: 640px) {
-  /* On mobile pull arrows inside the content area so they
-     don't overflow the viewport edges.                      */
-  .pd-nav-arrow--left  { left:  4px; }
-  .pd-nav-arrow--right { right: 4px; }
-
-  .pd-nav-arrow {
-    width: 38px;
-    height: 38px;
-    /* Always clearly visible on mobile as a swipe hint */
-    opacity: 1 !important;
-  }
-
-  /* Hidden arrows get very faint instead of invisible
-     so they still hint that the other end is the limit  */
-  .pd-nav-arrow--hidden {
-    opacity: 0.15 !important;
-  }
-}
-
-/* ── Tablet: shift arrows slightly inward ────────────────────── */
-@media (min-width: 641px) and (max-width: 1023px) {
-  .pd-nav-arrow--left  { left:  0; }
-  .pd-nav-arrow--right { right: 0; }
+.pd-mobile-arrow__label {
+  letter-spacing: 0.03em;
 }
