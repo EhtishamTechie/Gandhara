@@ -445,45 +445,46 @@ const ProductDetail = () => {
             </button>
 
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-              {/* Product Images — swipe target on mobile */}
-              <div
-                className="lg:sticky lg:top-8 lg:self-start"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-              >
-                <ImageGallery
-                  images={product.image || product.images}
-                  productTitle={product.seoTitle || product.title}
-                />
+              {/* Left col: image + mobile arrow bar (bar hidden on desktop) */}
+              <div className="lg:sticky lg:top-8 lg:self-start">
+                <div
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <ImageGallery
+                    images={product.image || product.images}
+                    productTitle={product.seoTitle || product.title}
+                  />
+                </div>
+
+                {/* Mobile-only arrow bar: below image, hidden on desktop */}
+                <div className="pd-mobile-arrow-bar">
+                  <button
+                    onClick={goToPrev}
+                    disabled={!prevProduct}
+                    aria-label="Previous product"
+                    className={`pd-mobile-arrow ${
+                      prevProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
+                    }`}
+                  >
+                    <ChevronLeft size={20} />
+                    <span className="pd-mobile-arrow__label">Prev</span>
+                  </button>
+                  <button
+                    onClick={goToNext}
+                    disabled={!nextProduct}
+                    aria-label="Next product"
+                    className={`pd-mobile-arrow ${
+                      nextProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
+                    }`}
+                  >
+                    <span className="pd-mobile-arrow__label">Next</span>
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
               </div>
 
-              {/* Mobile-only arrow bar: sits between image and text */}
-              <div className="pd-mobile-arrow-bar lg:hidden">
-                <button
-                  onClick={goToPrev}
-                  disabled={!prevProduct}
-                  aria-label="Previous product"
-                  className={`pd-mobile-arrow ${
-                    prevProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
-                  }`}
-                >
-                  <ChevronLeft size={20} />
-                  <span className="pd-mobile-arrow__label">Prev</span>
-                </button>
-                <button
-                  onClick={goToNext}
-                  disabled={!nextProduct}
-                  aria-label="Next product"
-                  className={`pd-mobile-arrow ${
-                    nextProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
-                  }`}
-                >
-                  <span className="pd-mobile-arrow__label">Next</span>
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-
-              {/* Product Information */}
+              {/* Right col: product information */}
               <div className="space-y-6">
               {/* Header */}
               <div>

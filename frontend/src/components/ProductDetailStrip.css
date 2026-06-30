@@ -61,18 +61,25 @@
   pointer-events: none;
 }
 
-/* Hide desktop arrows on mobile — mobile gets its own bar below */
+/* Hide desktop arrows on mobile */
 @media (max-width: 1023px) {
   .pd-nav-arrow--desktop {
-    display: none;
+    display: none !important;
   }
 }
 
-/* Tablet: flush with container edges */
+/* Hide mobile arrow bar on desktop (1024px+) */
+@media (min-width: 1024px) {
+  .pd-mobile-arrow-bar {
+    display: none !important;
+  }
+}
+
+/* Tablet (640–1023px): show desktop-style arrows flush with container */
 @media (min-width: 640px) and (max-width: 1023px) {
+  .pd-nav-arrow--desktop { display: inline-flex !important; }
   .pd-nav-arrow--left  { left:  0; }
   .pd-nav-arrow--right { right: 0; }
-  .pd-nav-arrow--desktop { display: inline-flex; } /* show on tablet */
 }
 
 
