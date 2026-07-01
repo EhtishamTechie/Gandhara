@@ -658,10 +658,10 @@ const ProductList = () => {
           </div>
         )}
 
-        {/* Edit Product Modal with Image Rotation */}
+        {/* Edit Product Modal - high z-index inline style ensures it renders above all admin panel layers */}
         {showEditModal && editingProduct && (
           <div
-            className="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4 animate-fadeIn"
+            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           >
             <div
               className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto animate-scaleIn"
@@ -1003,7 +1003,6 @@ const ProductList = () => {
 };
 
 export default ProductList;
-
 
 
    
