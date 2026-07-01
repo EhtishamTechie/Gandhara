@@ -997,7 +997,7 @@ const ProductList = () => {
                 </div>
               </div>
             </div>
-          ), document.body)}
+          , document.body)}
       </div>
     </div>
   );
