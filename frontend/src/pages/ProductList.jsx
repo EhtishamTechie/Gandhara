@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { getImageUrl } from "../utils/imageHelper.js";
 import { PencilIcon, TrashIcon, MagnifyingGlassIcon, XMarkIcon, CheckIcon, EyeIcon, FunnelIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/20/solid';
 import { useCategoryList } from '../hooks/useApi';
@@ -658,8 +659,8 @@ const ProductList = () => {
           </div>
         )}
 
-        {/* Edit Product Modal - high z-index inline style ensures it renders above all admin panel layers */}
-        {showEditModal && editingProduct && (
+        {/* Edit Product Modal - Rendered via React Portal directly into document.body to bypass all CSS containing blocks from animations/transforms */}
+        {showEditModal && editingProduct && createPortal(
           <div
             style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           >
@@ -996,7 +997,7 @@ const ProductList = () => {
                 </div>
               </div>
             </div>
-          )}
+          ), document.body)}
       </div>
     </div>
   );
