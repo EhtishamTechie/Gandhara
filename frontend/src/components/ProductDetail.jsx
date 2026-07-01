@@ -182,8 +182,8 @@ const ImageGallery = ({ images, productTitle }) => {
               key={index}
               onClick={() => setCurrentImage(index)}
               className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300 ${index === currentImage
-                  ? 'border-[#F1C27D] ring-2 ring-[#F1C27D]/30'
-                  : 'border-[#334155] hover:border-[#F1C27D]/50'
+                ? 'border-[#F1C27D] ring-2 ring-[#F1C27D]/30'
+                : 'border-[#334155] hover:border-[#F1C27D]/50'
                 }`}
             >
               <OptimizedImage
@@ -427,9 +427,8 @@ const ProductDetail = () => {
               onClick={goToPrev}
               disabled={!prevProduct}
               aria-label="Previous product"
-              className={`pd-nav-arrow pd-nav-arrow--left pd-nav-arrow--desktop ${
-                prevProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'
-              }`}
+              className={`pd-nav-arrow pd-nav-arrow--left pd-nav-arrow--desktop ${prevProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'
+                }`}
             >
               <ChevronLeft size={22} />
             </button>
@@ -437,9 +436,8 @@ const ProductDetail = () => {
               onClick={goToNext}
               disabled={!nextProduct}
               aria-label="Next product"
-              className={`pd-nav-arrow pd-nav-arrow--right pd-nav-arrow--desktop ${
-                nextProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'
-              }`}
+              className={`pd-nav-arrow pd-nav-arrow--right pd-nav-arrow--desktop ${nextProduct ? 'pd-nav-arrow--active' : 'pd-nav-arrow--hidden'
+                }`}
             >
               <ChevronRight size={22} />
             </button>
@@ -463,9 +461,8 @@ const ProductDetail = () => {
                     onClick={goToPrev}
                     disabled={!prevProduct}
                     aria-label="Previous product"
-                    className={`pd-mobile-arrow ${
-                      prevProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
-                    }`}
+                    className={`pd-mobile-arrow ${prevProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
+                      }`}
                   >
                     <ChevronLeft size={20} />
                     <span className="pd-mobile-arrow__label">Prev</span>
@@ -474,9 +471,8 @@ const ProductDetail = () => {
                     onClick={goToNext}
                     disabled={!nextProduct}
                     aria-label="Next product"
-                    className={`pd-mobile-arrow ${
-                      nextProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
-                    }`}
+                    className={`pd-mobile-arrow ${nextProduct ? 'pd-mobile-arrow--active' : 'pd-mobile-arrow--faint'
+                      }`}
                   >
                     <span className="pd-mobile-arrow__label">Next</span>
                     <ChevronRight size={20} />
@@ -486,120 +482,120 @@ const ProductDetail = () => {
 
               {/* Right col: product information */}
               <div className="space-y-6">
-              {/* Header */}
-              <div>
-                <div className="flex items-start justify-between mb-4">
-                  <h1 className="text-2xl lg:text-3xl font-bold text-[#F8FAFC] leading-tight">
-                    {product.seoTitle || product.title}
-                  </h1>
-                  <div className="flex space-x-2 ml-4">
-                    <button
-                      onClick={() => setIsFavorite(!isFavorite)}
-                      className={`p-2 rounded-full transition-all duration-300 ${isFavorite
+                {/* Header */}
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <h1 className="text-2xl lg:text-3xl font-bold text-[#F8FAFC] leading-tight">
+                      {product.seoTitle || product.title}
+                    </h1>
+                    <div className="flex space-x-2 ml-4">
+                      <button
+                        onClick={() => setIsFavorite(!isFavorite)}
+                        className={`p-2 rounded-full transition-all duration-300 ${isFavorite
                           ? 'bg-red-500 text-white'
                           : 'bg-[#1E293B] text-[#E2E8F0] hover:bg-[#334155]'
-                        }`}
-                    >
-                      <Heart size={20} fill={isFavorite ? 'currentColor' : 'none'} />
-                    </button>
-                    <button
-                      onClick={handleShare}
-                      className="p-2 bg-[#1E293B] text-[#E2E8F0] rounded-full hover:bg-[#334155] transition-all duration-300"
-                    >
-                      <Share2 size={20} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Rating */}
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        size={16}
-                        className={`${i < 4 ? 'text-[#F1C27D] fill-current' : 'text-[#334155]'
                           }`}
-                      />
-                    ))}
+                      >
+                        <Heart size={20} fill={isFavorite ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        onClick={handleShare}
+                        className="p-2 bg-[#1E293B] text-[#E2E8F0] rounded-full hover:bg-[#334155] transition-all duration-300"
+                      >
+                        <Share2 size={20} />
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[#E2E8F0] text-sm">(4.0) • 24 Reviews</span>
+
+                  {/* Rating */}
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          size={16}
+                          className={`${i < 4 ? 'text-[#F1C27D] fill-current' : 'text-[#334155]'
+                            }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[#E2E8F0] text-sm">(4.0) • 24 Reviews</span>
+                  </div>
+
+                  {/* Contact for Price - Removed as requested */}
                 </div>
 
-                {/* Contact for Price - Removed as requested */}
-              </div>
+                {/* Description */}
+                {product.description && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#F8FAFC] mb-3">Description</h3>
+                    <p className="text-[#E2E8F0] leading-relaxed">{product.seoDescription || product.description}</p>
+                  </div>
+                )}
 
-              {/* Description */}
-              {product.description && (
-                <div>
-                  <h3 className="text-lg font-semibold text-[#F8FAFC] mb-3">Description</h3>
-                  <p className="text-[#E2E8F0] leading-relaxed">{product.seoDescription || product.description}</p>
-                </div>
-              )}
+                {/* Specifications */}
+                {product.specifications && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#F8FAFC] mb-3">Specifications</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {Object.entries(product.specifications).map(([key, value]) => (
+                        <div key={key} className="flex justify-between p-3 bg-[#1E293B] rounded-lg">
+                          <span className="text-[#94A3B8] font-medium">{key}:</span>
+                          <span className="text-[#F8FAFC]">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-              {/* Specifications */}
-              {product.specifications && (
-                <div>
-                  <h3 className="text-lg font-semibold text-[#F8FAFC] mb-3">Specifications</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.entries(product.specifications).map(([key, value]) => (
-                      <div key={key} className="flex justify-between p-3 bg-[#1E293B] rounded-lg">
-                        <span className="text-[#94A3B8] font-medium">{key}:</span>
-                        <span className="text-[#F8FAFC]">{value}</span>
-                      </div>
-                    ))}
+                {/* Action Buttons */}
+                <div className="space-y-4">
+                  <WhatsAppButton
+                    phoneNumber="+923005567507"
+                    productName={product.seoTitle || product.title}
+                    productId={product._id}
+                    productUrl={window.location.href}
+                    product={product}
+                    className="w-full py-4 bg-gradient-to-r from-[#E6A44E] to-[#F1C27D] hover:from-[#F1C27D] hover:to-[#E6A44E] text-[#0F172A] font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center"
+                  >
+                    <ShoppingBag size={20} className="mr-2" />
+                    Order Now on WhatsApp
+                  </WhatsAppButton>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <a href="tel:+923005567507" className="flex items-center justify-center py-3 border border-[#334155] text-[#E2E8F0] rounded-lg hover:bg-[#1E293B] transition-all duration-300">
+                      <Phone size={18} className="mr-2" />
+                      Call Us
+                    </a>
+                    <a href={buildProductWhatsAppUrl(product)} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-3 border border-[#334155] text-[#E2E8F0] rounded-lg hover:bg-[#1E293B] transition-all duration-300">
+                      <MessageCircle size={18} className="mr-2" />
+                      Inquire
+                    </a>
                   </div>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <WhatsAppButton
-                  phoneNumber="+923005567507"
-                  productName={product.seoTitle || product.title}
-                  productId={product._id}
-                  productUrl={window.location.href}
-                  product={product}
-                  className="w-full py-4 bg-gradient-to-r from-[#E6A44E] to-[#F1C27D] hover:from-[#F1C27D] hover:to-[#E6A44E] text-[#0F172A] font-bold text-lg rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center"
-                >
-                  <ShoppingBag size={20} className="mr-2" />
-                  Order Now on WhatsApp
-                </WhatsAppButton>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <a href="tel:+923005567507" className="flex items-center justify-center py-3 border border-[#334155] text-[#E2E8F0] rounded-lg hover:bg-[#1E293B] transition-all duration-300">
-                    <Phone size={18} className="mr-2" />
-                    Call Us
-                  </a>
-                  <a href={buildProductWhatsAppUrl(product)} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center py-3 border border-[#334155] text-[#E2E8F0] rounded-lg hover:bg-[#1E293B] transition-all duration-300">
-                    <MessageCircle size={18} className="mr-2" />
-                    Inquire
-                  </a>
+                {/* Features */}
+                <div>
+                  <h3 className="text-lg font-semibold text-[#F8FAFC] mb-4">Why Choose This Product?</h3>
+                  <div className="grid gap-3">
+                    <FeatureCard
+                      icon={Package}
+                      title="Authentic Gandhara Craftsmanship"
+                      description="Handcrafted by skilled artisans using traditional techniques"
+                    />
+                    <FeatureCard
+                      icon={Shield}
+                      title="Quality Guaranteed"
+                      description="Each piece undergoes rigorous quality control"
+                    />
+                    <FeatureCard
+                      icon={Truck}
+                      title="Secure Shipping"
+                      description="Safe and insured delivery to your doorstep"
+                    />
+                  </div>
                 </div>
               </div>
-
-              {/* Features */}
-              <div>
-                <h3 className="text-lg font-semibold text-[#F8FAFC] mb-4">Why Choose This Product?</h3>
-                <div className="grid gap-3">
-                  <FeatureCard
-                    icon={Package}
-                    title="Authentic Gandhara Craftsmanship"
-                    description="Handcrafted by skilled artisans using traditional techniques"
-                  />
-                  <FeatureCard
-                    icon={Shield}
-                    title="Quality Guaranteed"
-                    description="Each piece undergoes rigorous quality control"
-                  />
-                  <FeatureCard
-                    icon={Truck}
-                    title="Secure Shipping"
-                    description="Safe and insured delivery to your doorstep"
-                  />
-                </div>
-              </div>
-            </div>
             </div>{/* end grid lg:grid-cols-2 */}
           </div>{/* end pd-nav-wrap */}
 

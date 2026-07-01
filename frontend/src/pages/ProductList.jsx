@@ -661,7 +661,7 @@ const ProductList = () => {
         {/* Edit Product Modal with Image Rotation */}
         {showEditModal && editingProduct && (
           <div
-            className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+            className="fixed inset-0 z-50 overflow-y-auto bg-black/50 flex items-center justify-center p-4 animate-fadeIn"
           >
             <div
               className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto animate-scaleIn"
