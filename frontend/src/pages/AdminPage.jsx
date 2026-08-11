@@ -148,7 +148,7 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 flex">
+    <div className="h-screen bg-stone-50 flex overflow-hidden">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
@@ -226,7 +226,7 @@ const AdminPage = () => {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-64 min-h-screen">
+      <div className="flex-1 lg:ml-64 h-screen overflow-y-auto flex flex-col relative" id="admin-main-scroll">
         {/* Top bar */}
         <div className="sticky top-0 z-30 flex h-16 items-center gap-x-4 border-b border-stone-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <button
@@ -248,7 +248,7 @@ const AdminPage = () => {
         </div>
 
         {/* Page content */}
-        <main className="py-6">
+        <main className="flex-1 py-6">
           <div className="px-4 sm:px-6 lg:px-8">
             {renderContent()}
           </div>

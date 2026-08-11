@@ -121,18 +121,20 @@ const ProductList = () => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
 
+    const rootElement = document.getElementById('admin-main-scroll');
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !loadingMore && hasMore) {
           loadMore();
         }
       },
-      { threshold: 0.1, rootMargin: '500px' }
+      { root: rootElement, rootMargin: '500px', threshold: 0.1 }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadingMore, hasMore, page]);  // Delete function
+  }, [loadingMore, hasMore, page, searchProduct, filterCategory]);
   const handleDelete = async (id, title) => {
     if (window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
       try {

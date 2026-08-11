@@ -34,6 +34,7 @@ const AddProduct = () => {
   const [featuredUntil, setFeaturedUntil] = useState("");
   const [isSoldOut, setIsSoldOut] = useState(false);
   const [spotlightDays, setSpotlightDays] = useState("");
+  const [jsonInput, setJsonInput] = useState("");
 
   // Fetch categories from backend (admin-managed)
   const { data: catData } = useCategoryList();
@@ -89,11 +90,62 @@ const AddProduct = () => {
     // Reset rotation states
     setImageRotation(0);
     setRotatedImageBlob(null);
+    setJsonInput("");
   };
 
   const handleCategoryChange = (e) => {
     const { value, checked } = e.target;
     setCategories((prev) => checked ? [...prev, value] : prev.filter((c) => c !== value));
+  };
+
+  const handleJsonParse = () => {
+    if (!jsonInput.trim()) {
+      alert("Please paste some JSON first.");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(jsonInput);
+      if (parsed.title) setTitle(parsed.title);
+      if (parsed.keywords) setKeywords(Array.isArray(parsed.keywords) ? parsed.keywords.join(', ') : parsed.keywords);
+      if (parsed.description) setDescription(parsed.description);
+      
+      // Default price to 0 if not provided
+      if (parsed.price !== undefined && parsed.price !== null) {
+        setPrice(parsed.price.toString());
+      } else {
+        setPrice("0");
+      }
+
+      if (parsed.shortDescription) setShortDescription(parsed.shortDescription);
+      
+      // SEO Fields
+      if (parsed.seoTitle) setSeoTitle(parsed.seoTitle);
+      if (parsed.seoDescription) setSeoDescription(parsed.seoDescription);
+      if (parsed.imageAlt) setImageAlt(parsed.imageAlt);
+      
+      // Limit focus keyword to 4 words
+      if (parsed.focusKeyword) {
+        const words = parsed.focusKeyword.split(/\\s+/).slice(0, 4).join(' ');
+        setFocusKeyword(words);
+      }
+      
+      // Handle spotlight if provided
+      if (parsed.isSoldOut !== undefined) setIsSoldOut(Boolean(parsed.isSoldOut));
+      if (parsed.spotlightDays) {
+        setSpotlightDays(parsed.spotlightDays.toString());
+        const days = Number(parsed.spotlightDays);
+        if (Number.isFinite(days) && days > 0) {
+          const d = new Date();
+          d.setDate(d.getDate() + days);
+          setFeaturedUntil(d.toISOString().slice(0, 16));
+        }
+      }
+
+      alert("Fields populated successfully from JSON!");
+    } catch (e) {
+      console.error(e);
+      alert("Invalid JSON format. Please check your input.");
+    }
   };
 
   // Image rotation function
@@ -303,6 +355,35 @@ const AddProduct = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6" encType="multipart/form-data">
+          {/* JSON Autofill Section */}
+          <div className="bg-stone-50 p-4 rounded-lg border border-stone-200">
+            <h3 className="text-sm font-medium text-stone-800 mb-2">Autofill with JSON</h3>
+            <p className="text-xs text-stone-500 mb-3">Paste a JSON object to automatically populate the fields below.</p>
+            <textarea
+              placeholder='{
+  "title": "Product Title",
+  "price": 0,
+  "keywords": "stone, craft",
+  "description": "Full description here",
+  "shortDescription": "Short description",
+  "seoTitle": "SEO Title | Gandhara Arts",
+  "seoDescription": "SEO Description here",
+  "focusKeyword": "stone craft",
+  "imageAlt": "Image alt text"
+}'
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+              className={`${inputClass} min-h-[220px] resize-y mb-3 font-mono text-xs`}
+            />
+            <button
+              type="button"
+              onClick={handleJsonParse}
+              className={secondaryButtonClass}
+            >
+              Parse JSON & Fill Form
+            </button>
+          </div>
+
           {/* Product Title */}
           <div>
             <label htmlFor="title" className={labelClass}>Product Title</label>
