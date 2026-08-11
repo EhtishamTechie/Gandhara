@@ -108,32 +108,24 @@ const ProductList = () => {
     }
   };
 
-  // Load more — pass current search/category explicitly
-  const loadMore = () => {
-    if (!loadingMore && hasMore) {
-      fetchProducts(page + 1, false, searchProduct, filterCategory);
-    }
-  };
+  // loadMore function removed since we directly call fetchProducts in the observer
 
-  // Infinite scroll using IntersectionObserver
-  const sentinelRef = useRef(null);
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+  // Infinite scroll using IntersectionObserver with callback ref pattern
+  const observer = useRef(null);
+  const sentinelRef = useCallback(node => {
+    if (observer.current) observer.current.disconnect();
+    
+    if (loadingMore || !hasMore || !node) return;
 
     const rootElement = document.getElementById('admin-main-scroll');
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && hasMore) {
-          loadMore();
-        }
-      },
-      { root: rootElement, rootMargin: '500px', threshold: 0.1 }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        fetchProducts(page + 1, false, searchProduct, filterCategory);
+      }
+    }, { root: rootElement, rootMargin: '400px', threshold: 0.1 });
+    
+    observer.current.observe(node);
   }, [loadingMore, hasMore, page, searchProduct, filterCategory]);
   const handleDelete = async (id, title) => {
     if (window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
