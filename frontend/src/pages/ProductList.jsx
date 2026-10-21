@@ -37,6 +37,18 @@ const ProductList = () => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [spotlightDays, setSpotlightDays] = useState('');
 
+  // Toast notification state
+  const [toast, setToast] = useState(null);
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = (text, type = 'success') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ text, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 3500);
+  };
+
   // Image rotation states for edit modal
   const [imageRotation, setImageRotation] = useState(0);
   const [rotatedImageBlob, setRotatedImageBlob] = useState(null);
@@ -64,8 +76,8 @@ const ProductList = () => {
     return () => clearTimeout(debounceTimer.current);
   }, [searchProduct, filterCategory]);
 
-  // Fetch products — search + category passed EXPLICITLY, never from closure
-  const fetchProducts = async (pageNum = 1, resetProducts = true, search = '', category = 'all') => {
+  // Fetch products — search + category passed EXPLICITLY, defaults to current state
+  const fetchProducts = async (pageNum = 1, resetProducts = true, search = searchProduct, category = filterCategory) => {
     try {
       if (pageNum === 1) {
         setLoading(true);
@@ -127,6 +139,7 @@ const ProductList = () => {
     
     observer.current.observe(node);
   }, [loadingMore, hasMore, page, searchProduct, filterCategory]);
+
   const handleDelete = async (id, title) => {
     if (window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
       try {
@@ -137,14 +150,15 @@ const ProductList = () => {
         });
 
         if (response.ok) {
-          alert("Product deleted successfully.");
-          fetchProducts(1, true, searchProduct, filterCategory);
+          setProducts(prev => prev.filter(p => p._id !== id));
+          setTotal(prev => Math.max(0, prev - 1));
+          showToast("Product deleted successfully.");
         } else {
           throw new Error('Failed to delete product');
         }
       } catch (err) {
         console.error("Failed to delete product:", err);
-        alert("Failed to delete product. Please check console.");
+        showToast("Failed to delete product. Please check console.", 'error');
       }
     }
   };
@@ -304,18 +318,32 @@ const ProductList = () => {
       });
 
       if (response.ok) {
-        alert('Product updated successfully!');
+        const data = await response.json();
+        const updated = data.product || {
+          ...editingProduct,
+          title: editForm.title,
+          seoTitle: editForm.seoTitle,
+          price: editForm.price ? parseFloat(editForm.price) : 0,
+          categories: editForm.categories,
+          description: editForm.description,
+          keywords: processedKeywords,
+          isSoldOut: Boolean(editForm.isSoldOut),
+          featuredUntil: editForm.featuredUntil || null
+        };
+
+        // Update product in-place so no refetching or filter resetting occurs!
+        setProducts(prev => prev.map(p => p._id === editingProduct._id ? { ...p, ...updated } : p));
         setShowEditModal(false);
         setEditingProduct(null);
         resetEditForm();
-        fetchProducts();
+        showToast('Product updated successfully!');
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to update product');
       }
     } catch (err) {
       console.error("Failed to update product:", err);
-      alert('Failed to update product. Please check console for details.');
+      showToast(err.message || 'Failed to update product. Please check console.', 'error');
     } finally {
       setSaveLoading(false);
     }
@@ -365,44 +393,6 @@ const ProductList = () => {
       }
     });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600"></div>
-            <span className="text-slate-600 font-medium">Loading products...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-8 shadow-sm">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <XMarkIcon className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-red-800 font-semibold text-lg mb-2">Error Loading Products</h3>
-              <p className="text-red-600 mb-2">Error: {error}</p>
-              <p className="text-red-600 text-sm mb-6">API URL: {API_BASE_URL}/api/products/all</p>
-              <button
-                onClick={fetchProducts}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -451,7 +441,7 @@ const ProductList = () => {
                   )}
                 </div>
 
-                {/* Category Filter */}
+                {/* Category Filter Dropdown */}
                 <div className="relative">
                   <select
                     value={filterCategory}
@@ -482,40 +472,68 @@ const ProductList = () => {
                 </div>
               </div>
 
-              {/* Category Filter Buttons */}
-              <div className="flex flex-wrap gap-2">
+              {/* Category Filter Buttons (All Categories without truncation) */}
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
                 <button
                   onClick={() => setFilterCategory("all")}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
                     filterCategory === "all" 
-                      ? "bg-indigo-600 text-white" 
+                      ? "bg-indigo-600 text-white shadow-sm" 
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
                 >
                   All Categories ({total})
                 </button>
-                {categoriesList.slice(0, 8).map(cat => {
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setFilterCategory(cat)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                        filterCategory === cat 
-                          ? "bg-indigo-600 text-white" 
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      }`}
-                    >
-                      {cat}{filterCategory === cat ? ` (${total})` : ''}
-                    </button>
-                  );
-                })}
+                {categoriesList.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setFilterCategory(cat)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                      filterCategory === cat 
+                        ? "bg-indigo-600 text-white shadow-sm" 
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {cat}{filterCategory === cat ? ` (${total})` : ''}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {/* Error State Banner (Keeps Header & Controls Mounted) */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 text-center animate-fadeInUp">
+            <p className="text-red-800 font-semibold text-lg mb-1">Error Loading Products</p>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+            <button
+              onClick={() => fetchProducts(1, true, searchProduct, filterCategory)}
+              className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Products Grid or Loading Skeleton */}
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, idx) => (
+              <div key={idx} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-pulse">
+                <div className="aspect-square bg-slate-200"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-slate-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+                  <div className="pt-3 border-t border-slate-100 flex gap-2">
+                    <div className="h-8 bg-slate-100 rounded flex-1"></div>
+                    <div className="h-8 bg-slate-100 rounded flex-1"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <>
           <div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
@@ -992,6 +1010,23 @@ const ProductList = () => {
               </div>
             </div>
           , document.body)}
+
+        {/* Toast Notification */}
+        {toast && createPortal(
+          <div className={`fixed bottom-6 right-6 z-[10000] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm font-medium animate-fadeInUp transition-all ${
+            toast.type === 'error'
+              ? 'bg-red-600 text-white shadow-red-500/30'
+              : 'bg-emerald-600 text-white shadow-emerald-500/30'
+          }`}>
+            {toast.type === 'error' ? (
+              <XMarkIcon className="h-5 w-5 text-white" />
+            ) : (
+              <CheckIcon className="h-5 w-5 text-white" />
+            )}
+            <span>{toast.text}</span>
+          </div>,
+          document.body
+        )}
       </div>
     </div>
   );

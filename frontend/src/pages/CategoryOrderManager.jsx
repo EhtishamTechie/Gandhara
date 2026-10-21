@@ -29,8 +29,9 @@ const CategoryOrderManager = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await fetch(`${API_BASE_URL}/api/category-order`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`${API_BASE_URL}/api/admin/category-order`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: 'no-store'
       });
       const data = await res.json();
       if (data.success) {
@@ -114,8 +115,8 @@ const CategoryOrderManager = () => {
     setHasChanges(true);
   };
 
-  // --- Add Category ---
-  const addCategory = () => {
+  // --- Add Category (Persisted Directly to Database) ---
+  const addCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
     if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
@@ -123,10 +124,42 @@ const CategoryOrderManager = () => {
       setTimeout(() => setMessage(null), 3000);
       return;
     }
-    setCategories([...categories, { name, isVisible: true }]);
+    const updated = [...categories, { name, isVisible: true }];
+    setCategories(updated);
     setNewCategoryName('');
     setShowAddForm(false);
-    setHasChanges(true);
+
+    // Save directly to database so reload retains it!
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${API_BASE_URL}/api/admin/category-order`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ categories: updated })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: `Category "${name}" added and saved successfully!` });
+        setHasChanges(false);
+        queryClient.invalidateQueries({ queryKey: ['categoryOrder'] });
+        queryClient.invalidateQueries({ queryKey: ['categoryTree'] });
+        queryClient.invalidateQueries({ queryKey: ['sidebarSettings'] });
+        queryClient.invalidateQueries({ queryKey: ['products', 'grouped'] });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to save new category' });
+        setHasChanges(true);
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Network error — could not save category' });
+      setHasChanges(true);
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMessage(null), 4000);
+    }
   };
 
   // --- Rename Category ---
@@ -170,6 +203,8 @@ const CategoryOrderManager = () => {
 
         // Invalidate React Query caches
         queryClient.invalidateQueries({ queryKey: ['categoryOrder'] });
+        queryClient.invalidateQueries({ queryKey: ['categoryTree'] });
+        queryClient.invalidateQueries({ queryKey: ['sidebarSettings'] });
         queryClient.invalidateQueries({ queryKey: ['products'] });
       } catch (err) {
         setMessage({ type: 'error', text: 'Network error — could not rename category' });
@@ -190,12 +225,41 @@ const CategoryOrderManager = () => {
     setEditingName('');
   };
 
-  // --- Delete Category ---
-  const deleteCategory = (index) => {
+  // --- Delete Category (Persisted Directly) ---
+  const deleteCategory = async (index) => {
+    const deletedName = categories[index]?.name;
     const newList = categories.filter((_, i) => i !== index);
     setCategories(newList);
     setDeleteConfirmIndex(null);
-    setHasChanges(true);
+
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${API_BASE_URL}/api/admin/category-order`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ categories: newList })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: `Category "${deletedName}" removed and saved.` });
+        setHasChanges(false);
+        queryClient.invalidateQueries({ queryKey: ['categoryOrder'] });
+        queryClient.invalidateQueries({ queryKey: ['categoryTree'] });
+        queryClient.invalidateQueries({ queryKey: ['sidebarSettings'] });
+        queryClient.invalidateQueries({ queryKey: ['products', 'grouped'] });
+      } else {
+        setHasChanges(true);
+      }
+    } catch (err) {
+      setHasChanges(true);
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMessage(null), 4000);
+    }
   };
 
   // --- Drag & Drop handlers ---
