@@ -16,6 +16,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUpIcon,
   ArrowDownIcon,
@@ -34,6 +35,7 @@ const authHeader = () => {
 };
 
 const SidebarCategoriesManager = () => {
+  const queryClient = useQueryClient();
   const [rows, setRows] = useState([]);          // merged [{name, slug, isVisible, sortOrder, childrenCount}]
   const [originalKey, setOriginalKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -56,57 +58,68 @@ const SidebarCategoriesManager = () => {
     setLoading(true);
     setError(null);
     try {
-      const [{ data: treeData }, { data: settingsData }] = await Promise.all([
-        axios.get(`${API_BASE}/api/categories/tree`),
-        axios.get(`${API_BASE}/api/sidebar-settings`)
+      const [{ data: orderData }, { data: settingsData }, { data: treeData }] = await Promise.all([
+        axios.get(`${API_BASE}/api/category-order`),
+        axios.get(`${API_BASE}/api/sidebar-settings`),
+        axios.get(`${API_BASE}/api/categories/tree`).catch(() => ({ data: { tree: [] } }))
       ]);
 
+      const rawCategories = Array.isArray(orderData?.categories) ? orderData.categories : [];
       const overrideMap = new Map(
         (settingsData?.overrides || []).map((o) => [o.categoryName, o])
       );
+      const treeChildrenMap = new Map(
+        (treeData?.tree || []).map((t) => [t.name, t.children?.length || 0])
+      );
 
-      const tree = Array.isArray(treeData?.tree) ? treeData.tree : [];
-
-      // The /tree endpoint already filters hidden categories server-side,
-      // but for the admin page we want to see *everything* (including
-      // hidden ones). The tree response also honours override.showInSidebar
-      // so hidden categories simply won't appear. Therefore we also
-      // read the overrides and, for any override not currently in the
-      // tree (i.e. hidden), synthesize a row from the override alone.
-      const merged = tree.map((c, idx) => {
+      const merged = rawCategories.map((c, idx) => {
         const override = overrideMap.get(c.name);
         return {
           name: c.name,
-          slug: c.slug,
+          slug: c.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
           isVisible: override
             ? override.showInSidebar !== false
             : c.isVisible !== false,
           sortOrder: override?.sortOrder ?? idx,
-          childrenCount: Array.isArray(c.children) ? c.children.length : 0
+          childrenCount: treeChildrenMap.get(c.name) || 0
         };
       });
 
-      // Pick up any category that's explicitly hidden via override and
-      // therefore missing from the tree.
-      const seen = new Set(merged.map((r) => r.name));
-      (settingsData?.overrides || []).forEach((o) => {
-        if (!seen.has(o.categoryName) && o.showInSidebar === false) {
-          merged.push({
-            name: o.categoryName,
-            slug: o.categoryName.toLowerCase().replace(/\s+/g, '-'),
-            isVisible: false,
-            sortOrder: o.sortOrder ?? merged.length,
-            childrenCount: 0
-          });
-        }
-      });
-
+      // Sort by sortOrder so user's custom sidebar sequence is respected
       merged.sort((a, b) => a.sortOrder - b.sortOrder);
 
       setRows(merged);
       setOriginalKey(shapeKey(merged));
     } catch (e) {
       setError(e?.response?.data?.message || e.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1-click sync with Category Order
+  const syncWithCategoryOrder = async () => {
+    setLoading(true);
+    try {
+      const { data: orderData } = await axios.get(`${API_BASE}/api/category-order`);
+      const { data: treeData } = await axios.get(`${API_BASE}/api/categories/tree`).catch(() => ({ data: { tree: [] } }));
+      const rawCategories = Array.isArray(orderData?.categories) ? orderData.categories : [];
+      const treeChildrenMap = new Map(
+        (treeData?.tree || []).map((t) => [t.name, t.children?.length || 0])
+      );
+
+      const synced = rawCategories.map((c, idx) => ({
+        name: c.name,
+        slug: c.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        isVisible: c.isVisible !== false,
+        sortOrder: idx,
+        childrenCount: treeChildrenMap.get(c.name) || 0
+      }));
+
+      setRows(synced);
+      flashNow(`Reset sequence and visibility to match Category Order (${synced.length} categories)`);
+    } catch (e) {
+      flashNow('Failed to sync from Category Order', true);
     } finally {
       setLoading(false);
     }
@@ -145,6 +158,9 @@ const SidebarCategoriesManager = () => {
         { overrides },
         { headers: { ...authHeader(), 'Content-Type': 'application/json' } }
       );
+      queryClient.invalidateQueries({ queryKey: ['categoryTree'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebarSettings'] });
+      queryClient.invalidateQueries({ queryKey: ['categoryOrder'] });
       setOriginalKey(shapeKey(rows));
       flashNow(`Saved ${data?.overrides?.length ?? overrides.length} categories`);
     } catch (e) {
@@ -185,6 +201,16 @@ const SidebarCategoriesManager = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={syncWithCategoryOrder}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-md border border-teal-200 transition-colors"
+            title="Reset sequence and visibility to match the master Category Order tab"
+          >
+            <ArrowPathIcon className="w-4 h-4" />
+            Sync with Category Order
+          </button>
           <button
             type="button"
             onClick={reset}

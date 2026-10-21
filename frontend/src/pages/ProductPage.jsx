@@ -1,6 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { useNavigate } from 'react-router-dom';
 import '../styles/animations.css';
 import { ShoppingBag, ArrowRight, Eye, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Search, ImageOff } from "lucide-react";
 import SEOHead from '../components/SEOHead';
@@ -408,21 +407,25 @@ const ProductDetailModal = ({ product, onClose, allProducts, onProductChange }) 
 // Main ProductPage Component
 const ProductPage = () => {
   const { categoryName } = useParams();
+  const [searchParams] = useSearchParams();
+  const subSlug = searchParams.get('sub') || '';
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const ITEMS_PER_PAGE = 20;
 
   const formattedTitle = formatCategoryName(categoryName);
+  const formattedSubTitle = formatCategoryName(subSlug);
   const apiCategoryName = formatCategoryForAPI(categoryName);
 
-  // Reset state and scroll to top when category changes
+  // Reset state and scroll to top when category or subcategory changes
   useEffect(() => {
     setSearchTerm('');
     setSelectedProduct(null);
     window.scrollTo(0, 0);
-  }, [categoryName]);
+  }, [categoryName, subSlug]);
 
-  // Use React Query infinite scroll — data cached per category
+  // Use React Query infinite scroll — data cached per category & subcategory
   const {
     data,
     isLoading: loading,
@@ -431,7 +434,7 @@ const ProductPage = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage: loadingMore,
-  } = useInfiniteProductsByCategory(apiCategoryName, ITEMS_PER_PAGE);
+  } = useInfiniteProductsByCategory(apiCategoryName, subSlug, ITEMS_PER_PAGE);
 
   // Show loading skeleton while fetching initial data for a new category
   const isInitialLoading = loading && !data;
@@ -486,20 +489,28 @@ const ProductPage = () => {
     }
   };
 
+  const seoTitleText = subSlug
+    ? `${formattedSubTitle} (${formattedTitle}) - Gandhara Arts Collection`
+    : `${formattedTitle || 'Premium Pakistani Stone Crafts'} - Gandhara Arts Collection`;
+
+  const seoDescText = subSlug
+    ? `Explore authentic handcrafted ${formattedSubTitle.toLowerCase()} in our ${formattedTitle} collection from Gandhara Arts.`
+    : `Explore authentic ${formattedTitle?.toLowerCase() || 'Pakistani stone crafts'} from Gandhara Arts. Handcrafted Buddha statues, sculptures, and heritage pieces from Taxila, Pakistan.`;
+
   return (
     <>
       <SEOHead 
-        title={`${formattedTitle || 'Premium Pakistani Stone Crafts'} - Gandhara Arts Collection`}
-        description={`Explore authentic ${formattedTitle?.toLowerCase() || 'Pakistani stone crafts'} from Gandhara Arts. Handcrafted Buddha statues, sculptures, and heritage pieces from Taxila, Pakistan.`}
-        keywords={`${formattedTitle?.toLowerCase() || 'pakistani stone crafts'}, gandhara arts, taxila sculptures, buddha statues, ${categoryName ? categoryName.replace(/-/g, ' ') : 'heritage crafts'}, pakistani art, stone carvings`}
-        canonicalUrl={`https://gandhara-arts-and-taxila-stone-crafts.com/products/${categoryName || ''}`}
+        title={seoTitleText}
+        description={seoDescText}
+        keywords={`${subSlug ? `${formattedSubTitle.toLowerCase()}, ` : ''}${formattedTitle?.toLowerCase() || 'pakistani stone crafts'}, gandhara arts, taxila sculptures, buddha statues, ${categoryName ? categoryName.replace(/-/g, ' ') : 'heritage crafts'}, pakistani art, stone carvings`}
+        canonicalUrl={`https://gandhara-arts-and-taxila-stone-crafts.com/products/${categoryName || ''}${subSlug ? `?sub=${encodeURIComponent(subSlug)}` : ''}`}
         ogType="website"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          "name": `${formattedTitle || 'Pakistani Stone Crafts'} Collection`,
-          "description": `Authentic ${formattedTitle?.toLowerCase() || 'Pakistani stone crafts'} handcrafted by artisans in Taxila, Pakistan`,
-          "url": `https://gandhara-arts-and-taxila-stone-crafts.com/products/${categoryName || ''}`,
+          "name": subSlug ? `${formattedSubTitle} - ${formattedTitle} Collection` : `${formattedTitle || 'Pakistani Stone Crafts'} Collection`,
+          "description": seoDescText,
+          "url": `https://gandhara-arts-and-taxila-stone-crafts.com/products/${categoryName || ''}${subSlug ? `?sub=${encodeURIComponent(subSlug)}` : ''}`,
           "provider": {
             "@type": "Organization",
             "name": "Gandhara Arts",
@@ -528,16 +539,37 @@ const ProductPage = () => {
         <Breadcrumbs items={[
           { name: 'Home', url: '/' },
           { name: 'Products', url: '/products' },
-          { name: formattedTitle || categoryName }
+          ...(subSlug ? [
+            { name: formattedTitle, url: `/category/${categoryName}` },
+            { name: formattedSubTitle }
+          ] : [
+            { name: formattedTitle || categoryName }
+          ])
         ]} />
 
         {/* Header */}
         <div className="text-center mb-8">
+          {subSlug && (
+            <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full text-xs font-semibold uppercase tracking-wider bg-[#F1C27D]/10 text-[#F1C27D] border border-[#F1C27D]/30 animate-fadeIn">
+              <span>{formattedTitle}</span>
+              <span>•</span>
+              <span>Subcategory: {formattedSubTitle}</span>
+              <Link
+                to={`/category/${categoryName}`}
+                className="ml-1 text-[#F1C27D] hover:text-white transition-colors p-0.5"
+                title="Clear subcategory filter"
+              >
+                <X size={14} className="inline" />
+              </Link>
+            </div>
+          )}
           <h1 className="text-3xl md:text-4xl font-bold mb-4 text-[#F1C27D]">
-            {loading ? 'Loading...' : formattedTitle || 'Products'}
+            {loading ? 'Loading...' : subSlug ? `${formattedSubTitle} — ${formattedTitle}` : formattedTitle || 'Products'}
           </h1>
           <p className="text-[#E2E8F0]">
-            Explore our collection of handcrafted pieces
+            {subSlug
+              ? `Explore our handcrafted ${formattedSubTitle.toLowerCase()} collection in ${formattedTitle}`
+              : 'Explore our collection of handcrafted pieces'}
           </p>
         </div>
 
@@ -580,16 +612,27 @@ const ProductPage = () => {
             <p className="text-[#E2E8F0] text-lg mb-4">
               {searchTerm 
                 ? `No products found matching "${searchTerm}"`
-                : "No products found in this category"}
+                : subSlug
+                  ? `No products found matching subcategory "${formattedSubTitle}" in ${formattedTitle}.`
+                  : "No products found in this category"}
             </p>
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="inline-flex items-center px-6 py-3 bg-[#F1C27D] hover:bg-[#E6A44E] text-[#0F172A] font-semibold rounded-lg"
+                className="inline-flex items-center px-6 py-3 bg-[#F1C27D] hover:bg-[#E6A44E] text-[#0F172A] font-semibold rounded-lg mr-3"
               >
                 Clear Search
                 <X size={16} className="ml-2" />
               </button>
+            )}
+            {subSlug && (
+              <Link
+                to={`/category/${categoryName}`}
+                className="inline-flex items-center px-6 py-3 bg-[#F1C27D] hover:bg-[#E6A44E] text-[#0F172A] font-semibold rounded-lg"
+              >
+                View all {formattedTitle} products
+                <ArrowRight size={16} className="ml-2" />
+              </Link>
             )}
           </div>
         )}

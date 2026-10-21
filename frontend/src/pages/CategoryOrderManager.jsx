@@ -88,9 +88,11 @@ const CategoryOrderManager = () => {
   // Save and re-fetch to ensure UI is in sync with backend
   const handleSave = async () => {
     await saveOrder();
-    // Invalidate React Query caches so Navbar, AllProductsPage, etc. get fresh data
+    // Invalidate React Query caches so Navbar, AllProductsPage, CategorySidebar, etc. get fresh data
     queryClient.invalidateQueries({ queryKey: ['categoryOrder'] });
     queryClient.invalidateQueries({ queryKey: ['products', 'grouped'] });
+    queryClient.invalidateQueries({ queryKey: ['categoryTree'] });
+    queryClient.invalidateQueries({ queryKey: ['sidebarSettings'] });
     await fetchOrder();
   };
 

@@ -82,7 +82,8 @@ const SEED_TREE = {
   'Home Decor':   ['Vases', 'Candle Holders'],
   'Garden Decor': ['Planters', 'Outdoor Statues'],
   'Fountains':    ['Wall Fountains', 'Floor Fountains'],
-  'Calligraphy':  ['Arabic Calligraphy', 'Urdu Calligraphy']
+  'Calligraphy':  ['Arabic Calligraphy', 'Urdu Calligraphy'],
+  'Stone Calligraphy': ['Arabic Calligraphy', 'Urdu Calligraphy']
 };
 
 const seedSubcategoriesIfEmpty = async () => {
@@ -189,18 +190,33 @@ const getCategoryTree = async (req, res) => {
       });
     }
 
-    // 5. Assemble the top-level list in admin-defined order,
-    //    filter by sidebar visibility, attach children.
+    // 5. Assemble the top-level list in admin-defined order from CategoryOrder,
+    //    filter by visibility, attach children.
     const rawCategories = orderDoc?.categories || [];
     const tree = rawCategories
       .map((cat, idx) => {
         const override = overrideMap.get(cat.name);
-        const showInSidebar = override
-          ? override.showInSidebar !== false
-          : cat.isVisible !== false;
+        
+        // Gandhara Art is the site core category — never hide it by stale override
+        let showInSidebar = cat.isVisible !== false;
+        if (cat.name === 'Gandhara Art') {
+          showInSidebar = true;
+        } else if (override && typeof override.showInSidebar === 'boolean') {
+          showInSidebar = override.showInSidebar && (cat.isVisible !== false);
+        }
 
-        const sortOrder = override?.sortOrder ?? idx;
-        const children = (childrenByParent.get(cat.name) || [])
+        // CategoryOrder defines the authoritative sequence!
+        const sortOrder = idx;
+
+        // Subcategories: also check if any match parent with alternate name (e.g. Calligraphy vs Stone Calligraphy)
+        let subList = childrenByParent.get(cat.name) || [];
+        if (subList.length === 0 && cat.name === 'Stone Calligraphy') {
+          subList = childrenByParent.get('Calligraphy') || [];
+        } else if (subList.length === 0 && cat.name === 'Calligraphy') {
+          subList = childrenByParent.get('Stone Calligraphy') || [];
+        }
+
+        const children = subList
           .filter((c) => c.isVisible !== false)
           .sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -212,8 +228,7 @@ const getCategoryTree = async (req, res) => {
           children
         };
       })
-      .filter((c) => c.isVisible)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .filter((c) => c.isVisible);
 
     res.json({
       success: true,

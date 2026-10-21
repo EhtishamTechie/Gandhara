@@ -127,16 +127,70 @@ const addProduct = async (req, res) => {
 const getProductsByCategory = async (req, res) => {
   try {
     const categoryName = req.params.categoryName.replace(/-/g, " ");
+    const subParam = (req.query.sub || '').trim();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
     // Create case-insensitive regex for category matching
-    const categoryRegex = new RegExp(`^${categoryName}$`, "i");
-    const query = {
+    const categoryRegex = new RegExp(`^${categoryName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i");
+    
+    let query = {
       categories: categoryRegex,
       isActive: true
     };
+
+    let activeSubCategory = null;
+
+    if (subParam) {
+      const Subcategory = require('../models/Subcategory');
+      const cleanSubSlug = subParam.toLowerCase();
+
+      // Look up subcategory by slug under this parent or globally
+      const subDoc = await Subcategory.findOne({
+        slug: cleanSubSlug,
+        $or: [
+          { parentCategoryName: categoryRegex },
+          { isVisible: true }
+        ]
+      }).lean();
+
+      const subName = subDoc ? subDoc.name : subParam.replace(/-/g, ' ');
+      activeSubCategory = {
+        name: subName,
+        slug: cleanSubSlug
+      };
+
+      // Build stem terms for matching: e.g. "Vases" -> "Vase", "Candle Holders" -> "Candle", "Planters" -> "Planter"
+      const words = subName
+        .split(/\s+/)
+        .map(w => w.replace(/(es|s)$/i, ''))
+        .filter(w => w.length >= 3);
+      if (words.length === 0) words.push(subName);
+
+      const wordRegexes = words.map(w => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
+      const exactSubRegex = new RegExp(`^${subName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+
+      query = {
+        isActive: true,
+        $and: [
+          {
+            $or: [
+              { categories: categoryRegex },
+              { categories: exactSubRegex }
+            ]
+          },
+          {
+            $or: [
+              { categories: exactSubRegex },
+              ...wordRegexes.map(r => ({ title: r })),
+              ...wordRegexes.map(r => ({ keywords: r })),
+              ...wordRegexes.map(r => ({ description: r }))
+            ]
+          }
+        ]
+      };
+    }
 
     // Run queries in parallel for better performance
     const [products, total] = await Promise.all([
@@ -167,7 +221,8 @@ const getProductsByCategory = async (req, res) => {
       page,
       limit,
       totalPages,
-      hasMore
+      hasMore,
+      subCategory: activeSubCategory
     });
   } catch (error) {
     console.error('getProductsByCategory error:', error);

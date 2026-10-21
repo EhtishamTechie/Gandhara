@@ -1,5 +1,7 @@
 const CategoryOrder = require('../models/CategoryOrder');
 const Product = require('../models/Product');
+const SidebarSettings = require('../models/SidebarSettings');
+const Subcategory = require('../models/Subcategory');
 const apiCache = require('../middleware/apiCacheMiddleware');
 
 // Default categories (used to seed the first time)
@@ -82,6 +84,19 @@ const updateCategoryOrder = async (req, res) => {
         }))
       },
       { new: true, upsert: true, lean: true }
+    );
+
+    // Keep SidebarSettings synchronized with the master sequence and visibility
+    const sidebarOverrides = categories.map((c, idx) => ({
+      categoryName: c.name.trim(),
+      showInSidebar: c.isVisible !== false,
+      sortOrder: idx
+    }));
+
+    await SidebarSettings.findOneAndUpdate(
+      { configKey: 'main' },
+      { overrides: sidebarOverrides },
+      { upsert: true }
     );
 
     // Clear API cache so public routes serve fresh data immediately
@@ -189,6 +204,18 @@ const renameCategory = async (req, res) => {
     await CategoryOrder.updateOne(
       { configKey: 'main', 'categories.name': trimmedOld },
       { $set: { 'categories.$.name': trimmedNew } }
+    );
+
+    // Also update SidebarSettings if present
+    await SidebarSettings.updateOne(
+      { configKey: 'main', 'overrides.categoryName': trimmedOld },
+      { $set: { 'overrides.$.categoryName': trimmedNew } }
+    );
+
+    // Also update Subcategory parentCategoryName if present
+    await Subcategory.updateMany(
+      { parentCategoryName: trimmedOld },
+      { $set: { parentCategoryName: trimmedNew } }
     );
 
     // 2. Rename the category in ALL products that have the old name

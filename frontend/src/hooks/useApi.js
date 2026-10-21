@@ -210,13 +210,14 @@ export const useAdminSiteMediaSlots = (enabled = true) => {
   });
 };
 
-// Infinite scroll for a single category page — cached per category
-export const useInfiniteProductsByCategory = (categoryName, limit = 20) => {
+// Infinite scroll for a single category page — cached per category and subcategory
+export const useInfiniteProductsByCategory = (categoryName, sub = null, limit = 20) => {
   return useInfiniteQuery({
-    queryKey: ['products', 'category', categoryName, 'infinite'],
+    queryKey: ['products', 'category', categoryName, sub || 'all', 'infinite'],
     queryFn: async ({ pageParam = 1 }) => {
+      const subQuery = sub ? `&sub=${encodeURIComponent(sub)}` : '';
       const { data } = await axios.get(
-        `${API_BASE_URL}/api/products/category/${encodeURIComponent(categoryName)}?page=${pageParam}&limit=${limit}`
+        `${API_BASE_URL}/api/products/category/${encodeURIComponent(categoryName)}?page=${pageParam}&limit=${limit}${subQuery}`
       );
       return data;
     },
