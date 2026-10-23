@@ -1,9 +1,36 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { getImageUrl } from "../utils/imageHelper.js";
-import { PencilIcon, TrashIcon, MagnifyingGlassIcon, XMarkIcon, CheckIcon, EyeIcon, FunnelIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/20/solid';
+import OptimizedImage from "../components/OptimizedImage";
+import { 
+  PencilIcon, 
+  TrashIcon, 
+  MagnifyingGlassIcon, 
+  XMarkIcon, 
+  CheckIcon, 
+  EyeIcon, 
+  FunnelIcon, 
+  PlusIcon, 
+  ArrowPathIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
+} from '@heroicons/react/20/solid';
 import { useCategoryList } from '../hooks/useApi';
 import '../styles/animations.css';
+
+// Canonical image resolver matching website components
+const resolveProductImage = (product) => {
+  if (!product) return '/GandharaImages/Gandharalogo.webp';
+  const candidate =
+    (Array.isArray(product.images) && product.images.length > 0 && product.images[0]) ||
+    product.image ||
+    null;
+  if (!candidate) return '/GandharaImages/Gandharalogo.webp';
+  if (typeof candidate === 'string' && /^https?:\/\//i.test(candidate)) {
+    return candidate;
+  }
+  return getImageUrl(candidate);
+};
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
@@ -12,6 +39,7 @@ const ProductList = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [filterCategory, setFilterCategory] = useState("all");
+  const [showCategoryPills, setShowCategoryPills] = useState(false); // Collapsed by default per user request
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState("grid");
   const [page, setPage] = useState(1);
@@ -181,7 +209,7 @@ const ProductList = () => {
       featuredUntil: product.featuredUntil ? new Date(product.featuredUntil).toISOString().slice(0, 16) : "",
       isSoldOut: Boolean(product.isSoldOut),
       image: null,
-      imagePreview: product.image ? getImageUrl(product.image) : null
+      imagePreview: resolveProductImage(product)
     });
     setSpotlightDays('');
     // Reset rotation states when opening edit modal
@@ -472,32 +500,65 @@ const ProductList = () => {
                 </div>
               </div>
 
-              {/* Category Filter Buttons (All Categories without truncation) */}
-              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
-                <button
-                  onClick={() => setFilterCategory("all")}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                    filterCategory === "all" 
-                      ? "bg-indigo-600 text-white shadow-sm" 
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  All Categories ({total})
-                </button>
-                {categoriesList.map(cat => (
+              {/* Active Category Display & Bottom Arrow Toggle */}
+              <div className="pt-2 flex items-center justify-between border-t border-slate-100 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500">Active Category:</span>
                   <button
-                    key={cat}
-                    onClick={() => setFilterCategory(cat)}
+                    onClick={() => setFilterCategory("all")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                      filterCategory === "all"
+                        ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        : "bg-indigo-600 text-white shadow-sm"
+                    }`}
+                  >
+                    <span>{filterCategory === "all" ? `All Categories (${total})` : filterCategory}</span>
+                    {filterCategory !== "all" && <XMarkIcon className="h-3.5 w-3.5 ml-0.5" />}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryPills(prev => !prev)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-indigo-50 border border-indigo-100"
+                >
+                  <span>{showCategoryPills ? "Hide Categories" : `Show Categories (${categoriesList.length})`}</span>
+                  {showCategoryPills ? (
+                    <ChevronUpIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+
+              {/* Collapsible Category Filter Buttons (Hidden by default, shown via bottom arrow) */}
+              {showCategoryPills && (
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1 pt-2 animate-fadeIn border-t border-slate-100">
+                  <button
+                    onClick={() => setFilterCategory("all")}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                      filterCategory === cat 
+                      filterCategory === "all" 
                         ? "bg-indigo-600 text-white shadow-sm" 
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                     }`}
                   >
-                    {cat}{filterCategory === cat ? ` (${total})` : ''}
+                    All Categories ({total})
                   </button>
-                ))}
-              </div>
+                  {categoriesList.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setFilterCategory(cat)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                        filterCategory === cat 
+                          ? "bg-indigo-600 text-white shadow-sm" 
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      {cat}{filterCategory === cat ? ` (${total})` : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -545,19 +606,22 @@ const ProductList = () => {
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className="relative overflow-hidden">
-                  <div className="aspect-square">
-                    <img
-                      src={getImageUrl(product.image)}
-                      alt={product.title || 'Product'}
+                  <div className="aspect-square bg-slate-100 overflow-hidden">
+                    <OptimizedImage
+                      src={resolveProductImage(product)}
+                      alt={product.seoTitle || product.title || 'Product'}
+                      width={600}
+                      height={600}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 select-none"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/GandharaImages/Gandharalogo.webp';
-                      }}
-                      onContextMenu={(e) => e.preventDefault()}
-                      onDragStart={(e) => e.preventDefault()}
+                      objectFit="cover"
+                      lazy={index > 8}
                       draggable={false}
-                      style={{ pointerEvents: 'auto' }}
+                      onError={(e) => {
+                        if (e?.target) {
+                          e.target.onerror = null;
+                          e.target.src = '/GandharaImages/Gandharalogo.webp';
+                        }
+                      }}
                     />
                   </div>
 

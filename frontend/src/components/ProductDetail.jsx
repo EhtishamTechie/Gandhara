@@ -11,6 +11,7 @@ import {
   Heart,
   Share2,
   ZoomIn,
+  ZoomOut,
   ChevronLeft,
   ChevronRight,
   Package,
@@ -59,58 +60,70 @@ const WhatsAppButton = ({ phoneNumber, productName, productId, productUrl, produ
   );
 };
 
-// Image Gallery Component with Magnifier
+// Image Gallery Component with Double-Click Zoom on Laptop / Desktop
 const ImageGallery = ({ images, productTitle }) => {
   const [currentImage, setCurrentImage] = useState(0);
-  const [showMagnifier, setShowMagnifier] = useState(false);
-  const [lensStyle, setLensStyle] = useState({});
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
   const containerRef = useRef(null);
-
-  const LENS_SIZE = 200; // px diameter
-  const ZOOM = 3;        // zoom factor
 
   const imageArray = Array.isArray(images) ? images : [images];
   const processedImages = imageArray.map(img => getImagePath(img));
 
-  // Use 800w AVIF for magnifier to avoid loading raw PNG
-  const getAvifPath = (src) => {
-    if (!src) return src;
-    return src.replace(/\.(jpg|jpeg|png|webp)$/i, '') + '-800w.avif';
+  const nextImage = () => {
+    setIsZoomed(false);
+    setCurrentImage((prev) => (prev + 1) % processedImages.length);
   };
 
-  const nextImage = () => setCurrentImage((prev) => (prev + 1) % processedImages.length);
-  const prevImage = () => setCurrentImage((prev) => (prev - 1 + processedImages.length) % processedImages.length);
+  const prevImage = () => {
+    setIsZoomed(false);
+    setCurrentImage((prev) => (prev - 1 + processedImages.length) % processedImages.length);
+  };
 
-  const handleMouseMove = (e) => {
+  const handleDoubleClick = (e) => {
     if (!containerRef.current) return;
     const { left, top, width, height } = containerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(e.clientX - left, width));
-    const y = Math.max(0, Math.min(e.clientY - top, height));
+    const x = Math.max(0, Math.min(((e.clientX - left) / width) * 100, 100));
+    const y = Math.max(0, Math.min(((e.clientY - top) / height) * 100, 100));
+    setZoomOrigin({ x, y });
+    setIsZoomed(prev => !prev);
+  };
 
-    setLensStyle({
-      left: `${x - LENS_SIZE / 2}px`,
-      top: `${y - LENS_SIZE / 2}px`,
-      backgroundImage: `url(${getAvifPath(processedImages[currentImage])})`,
-      // Scale image to ZOOM × container size inside the lens
-      backgroundSize: `${width * ZOOM}px ${height * ZOOM}px`,
-      // Offset so the zoomed region is centered on the cursor
-      backgroundPosition: `${-(x * ZOOM - LENS_SIZE / 2)}px ${-(y * ZOOM - LENS_SIZE / 2)}px`,
-      backgroundRepeat: 'no-repeat',
-    });
+  const handleMouseMove = (e) => {
+    if (!isZoomed || !containerRef.current) return;
+    const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(((e.clientX - left) / width) * 100, 100));
+    const y = Math.max(0, Math.min(((e.clientY - top) / height) * 100, 100));
+    setZoomOrigin({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    if (isZoomed) {
+      setIsZoomed(false);
+      setZoomOrigin({ x: 50, y: 50 });
+    }
   };
 
   return (
     <div className="space-y-4">
-      {/* Main Image with Magnifier */}
+      {/* Main Image Container */}
       <div
         ref={containerRef}
-        className="relative aspect-square bg-[#1E293B] rounded-xl overflow-hidden group"
-        onMouseEnter={() => setShowMagnifier(true)}
-        onMouseLeave={() => setShowMagnifier(false)}
+        className="relative aspect-square bg-[#1E293B] rounded-xl overflow-hidden group select-none"
+        onDoubleClick={handleDoubleClick}
         onMouseMove={handleMouseMove}
-        style={{ cursor: showMagnifier ? 'crosshair' : 'default' }}
+        onMouseLeave={handleMouseLeave}
+        style={{ cursor: isZoomed ? 'zoom-out' : 'zoom-in' }}
       >
-        <div key={currentImage} className="w-full h-full relative animate-fadeIn">
+        <div
+          key={currentImage}
+          className="w-full h-full relative"
+          style={{
+            transform: isZoomed ? 'scale(2.3)' : 'scale(1)',
+            transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+            transition: isZoomed ? 'transform 0.15s ease-out' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
           <OptimizedImage
             src={processedImages[currentImage]}
             alt={`${productTitle} - Image ${currentImage + 1}`}
@@ -129,30 +142,47 @@ const ImageGallery = ({ images, productTitle }) => {
           />
         </div>
 
-        {/* Magnifier Lens */}
-        {showMagnifier && (
-          <div
-            className="absolute pointer-events-none border-2 border-white/80 rounded-full shadow-2xl overflow-hidden"
-            style={{
-              width: `${LENS_SIZE}px`,
-              height: `${LENS_SIZE}px`,
-              zIndex: 20,
-              ...lensStyle,
-            }}
-          />
-        )}
+        {/* Desktop / Laptop Zoom Indicator Badge */}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsZoomed(prev => !prev);
+          }}
+          className="absolute top-3 right-3 hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0F172A]/80 hover:bg-[#0F172A] text-white/90 text-xs font-medium backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 cursor-pointer z-10"
+          title={isZoomed ? "Double-click or click to reset zoom" : "Double-click to zoom in"}
+        >
+          {isZoomed ? (
+            <>
+              <ZoomOut size={14} className="text-[#F1C27D]" />
+              <span>Click to reset</span>
+            </>
+          ) : (
+            <>
+              <ZoomIn size={14} className="text-[#F1C27D]" />
+              <span>Double-click to zoom</span>
+            </>
+          )}
+        </div>
 
         {/* Navigation buttons */}
         {processedImages.length > 1 && (
           <>
             <button
-              onClick={prevImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
+              aria-label="Previous image"
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-[#0F172A]/70 hover:bg-[#0F172A]/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-10"
             >
               <ChevronLeft size={20} />
             </button>
             <button
-              onClick={nextImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
+              aria-label="Next image"
               className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[#0F172A]/70 hover:bg-[#0F172A]/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-10"
             >
               <ChevronRight size={20} />
@@ -180,7 +210,10 @@ const ImageGallery = ({ images, productTitle }) => {
           {processedImages.map((image, index) => (
             <button
               key={index}
-              onClick={() => setCurrentImage(index)}
+              onClick={() => {
+                setIsZoomed(false);
+                setCurrentImage(index);
+              }}
               className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300 ${index === currentImage
                 ? 'border-[#F1C27D] ring-2 ring-[#F1C27D]/30'
                 : 'border-[#334155] hover:border-[#F1C27D]/50'

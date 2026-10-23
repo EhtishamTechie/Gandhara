@@ -520,6 +520,8 @@ const searchProducts = async (req, res) => {
       isActive: true,
       $or: [
         { title: { $regex: searchTerm, $options: 'i' } },
+        { seoTitle: { $regex: searchTerm, $options: 'i' } },
+        { slug: { $regex: searchTerm, $options: 'i' } },
         { description: { $regex: searchTerm, $options: 'i' } },
         { keywords: { $regex: searchTerm, $options: 'i' } },
         { categories: { $regex: searchTerm, $options: 'i' } },

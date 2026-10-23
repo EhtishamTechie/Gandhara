@@ -585,6 +585,9 @@ const AllProductsPage = () => {
   const [searchParams] = useSearchParams();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounceRef = useRef(null);
 
   // Use grouped products API (categories in admin-defined order)
   const {
@@ -594,7 +597,7 @@ const AllProductsPage = () => {
     error
   } = useGroupedProducts(12);
 
-  // Flatten all groups into a single products array for search
+  // Flatten all groups into a single products array for count
   const allProducts = useMemo(() => {
     if (!groupedData?.groups) return [];
     return groupedData.groups.flatMap(g => g.products || []);
@@ -602,21 +605,44 @@ const AllProductsPage = () => {
 
   const total = allProducts.length;
 
-  // Filter products based on search term
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm) return null; // null = show grouped view
-    return allProducts.filter(product =>
-      product.title && product.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allProducts, searchTerm]);
+  // Server-side search matching admin panel search functionality
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/products?search=${encodeURIComponent(trimmed)}&limit=100`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.products || []);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [searchTerm]);
+
+  const filteredProducts = searchTerm.trim() ? (searchResults || []) : null;
 
   // Filter groups based on search term (for grouped view with search)
   const filteredGroups = useMemo(() => {
     if (!groupedData?.groups) return [];
-    if (!searchTerm) return groupedData.groups;
-    // When searching, show flat filtered results instead
     return groupedData.groups;
-  }, [groupedData, searchTerm]);
+  }, [groupedData]);
 
   // Read search parameter from URL on mount
   useEffect(() => {
@@ -738,6 +764,15 @@ const AllProductsPage = () => {
           />
         )}
 
+        {/* Search Loading Skeleton */}
+        {searchLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 mb-12">
+            {[...Array(skeletonCount)].map((_, index) => (
+               <ProductCardSkeleton key={index} />
+            ))}
+          </div>
+        )}
+
         {isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
             {[...Array(skeletonCount)].map((_, index) => (
@@ -773,7 +808,7 @@ const AllProductsPage = () => {
         )}
 
         {/* Empty Search Results */}
-        {!isLoading && !isError && allProducts.length > 0 && filteredProducts && filteredProducts.length === 0 && searchTerm && (
+        {!searchLoading && !isLoading && !isError && filteredProducts && filteredProducts.length === 0 && searchTerm && (
           <div className="text-center py-12 px-4 animate-fadeInUp">
             <p className="text-gray-700 md:text-[#E2E8F0] text-lg mb-6">
               No products found matching "{searchTerm}".
@@ -789,7 +824,7 @@ const AllProductsPage = () => {
         )}
 
         {/* Flat search results (when user is searching) */}
-        {!isLoading && !isError && filteredProducts && filteredProducts.length > 0 && (
+        {!searchLoading && !isLoading && !isError && filteredProducts && filteredProducts.length > 0 && (
           <div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 lg:gap-8 animate-fadeIn"
           >
