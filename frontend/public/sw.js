@@ -1,8 +1,8 @@
 // Service Worker for Gandhara Arts
 // Provides offline caching and faster repeat visits
 
-const CACHE_VERSION = 'gandhara-v2';
-const RUNTIME_CACHE = 'gandhara-runtime-v2';
+const CACHE_VERSION = 'gandhara-v3';
+const RUNTIME_CACHE = 'gandhara-runtime-v3';
 
 // Assets to cache immediately on install
 const STATIC_CACHE_URLS = [

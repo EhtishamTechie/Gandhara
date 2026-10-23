@@ -60,47 +60,148 @@ const WhatsAppButton = ({ phoneNumber, productName, productId, productUrl, produ
   );
 };
 
-// Image Gallery Component with Double-Click Zoom on Laptop / Desktop
+// Image Gallery Component with Double-Click Zoom (Desktop) & Pinch / Double-Tap Zoom (Mobile)
 const ImageGallery = ({ images, productTitle }) => {
   const [currentImage, setCurrentImage] = useState(0);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
+  const [scale, setScale] = useState(1);
+  const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const containerRef = useRef(null);
+
+  const touchState = useRef({
+    initialDist: 0,
+    initialScale: 1,
+    lastTouch: { x: 0, y: 0 },
+    lastTap: 0,
+    isPinching: false,
+  });
+
+  const isZoomed = scale > 1.05;
 
   const imageArray = Array.isArray(images) ? images : [images];
   const processedImages = imageArray.map(img => getImagePath(img));
 
+  const resetZoom = () => {
+    setScale(1);
+    setOrigin({ x: 50, y: 50 });
+  };
+
   const nextImage = () => {
-    setIsZoomed(false);
+    resetZoom();
     setCurrentImage((prev) => (prev + 1) % processedImages.length);
   };
 
   const prevImage = () => {
-    setIsZoomed(false);
+    resetZoom();
     setCurrentImage((prev) => (prev - 1 + processedImages.length) % processedImages.length);
   };
 
-  const handleDoubleClick = (e) => {
-    if (!containerRef.current) return;
-    const { left, top, width, height } = containerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(((e.clientX - left) / width) * 100, 100));
-    const y = Math.max(0, Math.min(((e.clientY - top) / height) * 100, 100));
-    setZoomOrigin({ x, y });
-    setIsZoomed(prev => !prev);
+  // Toggle zoom centered at client coordinates
+  const toggleZoomAt = (clientX, clientY) => {
+    if (isZoomed) {
+      resetZoom();
+    } else {
+      if (!containerRef.current) return;
+      const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(((clientX - left) / width) * 100, 100));
+      const y = Math.max(0, Math.min(((clientY - top) / height) * 100, 100));
+      setOrigin({ x, y });
+      setScale(2.4);
+    }
   };
 
+  // Desktop double-click to zoom
+  const handleDoubleClick = (e) => {
+    toggleZoomAt(e.clientX, e.clientY);
+  };
+
+  // Desktop hover panning while zoomed
   const handleMouseMove = (e) => {
     if (!isZoomed || !containerRef.current) return;
     const { left, top, width, height } = containerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(((e.clientX - left) / width) * 100, 100));
     const y = Math.max(0, Math.min(((e.clientY - top) / height) * 100, 100));
-    setZoomOrigin({ x, y });
+    setOrigin({ x, y });
   };
 
   const handleMouseLeave = () => {
     if (isZoomed) {
-      setIsZoomed(false);
-      setZoomOrigin({ x: 50, y: 50 });
+      resetZoom();
+    }
+  };
+
+  // Mobile Touch Gestures: Pinch-to-zoom, single-finger pan when zoomed, and double-tap to zoom
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      // 2 fingers: pinch start
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      touchState.current.initialDist = dist;
+      touchState.current.initialScale = scale;
+      touchState.current.isPinching = true;
+
+      if (containerRef.current) {
+        const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+        const x = Math.max(0, Math.min(((midX - left) / width) * 100, 100));
+        const y = Math.max(0, Math.min(((midY - top) / height) * 100, 100));
+        setOrigin({ x, y });
+      }
+    } else if (e.touches.length === 1) {
+      touchState.current.isPinching = false;
+      const touch = e.touches[0];
+      touchState.current.lastTouch = { x: touch.clientX, y: touch.clientY };
+
+      // Double-tap detection
+      const now = Date.now();
+      const timeDiff = now - touchState.current.lastTap;
+      if (timeDiff < 320 && timeDiff > 40) {
+        toggleZoomAt(touch.clientX, touch.clientY);
+        touchState.current.lastTap = 0;
+      } else {
+        touchState.current.lastTap = now;
+      }
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && touchState.current.isPinching) {
+      // Pinch to zoom in/out
+      if (e.cancelable) e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (touchState.current.initialDist > 0) {
+        const factor = dist / touchState.current.initialDist;
+        const newScale = Math.min(Math.max(touchState.current.initialScale * factor, 1), 3.5);
+        setScale(newScale);
+      }
+    } else if (e.touches.length === 1 && isZoomed && containerRef.current) {
+      // Pan across image with 1 finger when zoomed
+      if (e.cancelable) e.preventDefault();
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchState.current.lastTouch.x;
+      const deltaY = touch.clientY - touchState.current.lastTouch.y;
+      touchState.current.lastTouch = { x: touch.clientX, y: touch.clientY };
+
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      const shiftX = ((deltaX / width) * 100) / scale;
+      const shiftY = ((deltaY / height) * 100) / scale;
+
+      setOrigin((prev) => ({
+        x: Math.max(0, Math.min(prev.x - shiftX, 100)),
+        y: Math.max(0, Math.min(prev.y - shiftY, 100)),
+      }));
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (e.touches.length < 2) {
+      touchState.current.isPinching = false;
+    }
+    if (e.touches.length === 0 && scale < 1.08) {
+      resetZoom();
     }
   };
 
@@ -113,15 +214,21 @@ const ImageGallery = ({ images, productTitle }) => {
         onDoubleClick={handleDoubleClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        style={{ cursor: isZoomed ? 'zoom-out' : 'zoom-in' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          cursor: isZoomed ? 'zoom-out' : 'zoom-in',
+          touchAction: isZoomed ? 'none' : 'pan-y'
+        }}
       >
         <div
           key={currentImage}
           className="w-full h-full relative"
           style={{
-            transform: isZoomed ? 'scale(2.3)' : 'scale(1)',
-            transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
-            transition: isZoomed ? 'transform 0.15s ease-out' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            transform: `scale(${scale})`,
+            transformOrigin: `${origin.x}% ${origin.y}%`,
+            transition: touchState.current.isPinching ? 'none' : (isZoomed ? 'transform 0.12s ease-out' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)')
           }}
         >
           <OptimizedImage
@@ -142,27 +249,35 @@ const ImageGallery = ({ images, productTitle }) => {
           />
         </div>
 
-        {/* Desktop / Laptop Zoom Indicator Badge */}
-        <div
+        {/* Zoom Indicator Badge (Interactive for both Desktop and Mobile) */}
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setIsZoomed(prev => !prev);
+            if (isZoomed) {
+              resetZoom();
+            } else {
+              setScale(2.4);
+              setOrigin({ x: 50, y: 50 });
+            }
           }}
-          className="absolute top-3 right-3 hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0F172A]/80 hover:bg-[#0F172A] text-white/90 text-xs font-medium backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 cursor-pointer z-10"
-          title={isZoomed ? "Double-click or click to reset zoom" : "Double-click to zoom in"}
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0F172A]/85 hover:bg-[#0F172A] text-white/95 text-xs font-medium backdrop-blur-md border border-white/10 shadow-lg transition-all duration-200 cursor-pointer z-10 select-none active:scale-95"
+          title={isZoomed ? "Click to reset zoom" : "Double-click or pinch to zoom"}
+          aria-label={isZoomed ? "Reset zoom" : "Zoom in"}
         >
           {isZoomed ? (
             <>
               <ZoomOut size={14} className="text-[#F1C27D]" />
-              <span>Click to reset</span>
+              <span>Reset zoom</span>
             </>
           ) : (
             <>
               <ZoomIn size={14} className="text-[#F1C27D]" />
-              <span>Double-click to zoom</span>
+              <span className="hidden sm:inline">Double-click to zoom</span>
+              <span className="sm:hidden">Pinch / tap to zoom</span>
             </>
           )}
-        </div>
+        </button>
 
         {/* Navigation buttons */}
         {processedImages.length > 1 && (
