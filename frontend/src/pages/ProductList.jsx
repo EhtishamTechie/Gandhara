@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { getImageUrl } from "../utils/imageHelper.js";
 import OptimizedImage from "../components/OptimizedImage";
@@ -15,7 +15,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon
 } from '@heroicons/react/20/solid';
-import { useCategoryList } from '../hooks/useApi';
+import { useCategoryList, useCategoryTree } from '../hooks/useApi';
 import '../styles/animations.css';
 
 // Canonical image resolver matching website components
@@ -39,6 +39,7 @@ const ProductList = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterSubcategory, setFilterSubcategory] = useState("all");
   const [showCategoryPills, setShowCategoryPills] = useState(false); // Collapsed by default per user request
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState("grid");
@@ -56,6 +57,7 @@ const ProductList = () => {
     description: "",
     price: "",
     categories: [],
+    subcategory: "",
     // Featured spotlight controls
     featuredUntil: "",
     isSoldOut: false,
@@ -82,11 +84,37 @@ const ProductList = () => {
   const [rotatedImageBlob, setRotatedImageBlob] = useState(null);
   const [isRotating, setIsRotating] = useState(false);
 
-  // Fetch categories from backend (admin-managed)
+  // Fetch categories & category tree from backend
   const { data: catData } = useCategoryList();
+  const { data: treeData } = useCategoryTree();
   const categoriesList = catData?.categories
     ? catData.categories.map(c => c.name)
     : [];
+
+  // Active subcategories under current filter category
+  const activeCategorySubcategories = useMemo(() => {
+    if (!treeData?.tree || filterCategory === 'all') return [];
+    const catObj = treeData.tree.find(c => c.name.toLowerCase() === filterCategory.toLowerCase());
+    return catObj?.children || [];
+  }, [treeData, filterCategory]);
+
+  // Available subcategories for the categories selected in the edit modal
+  const editModalSubcategories = useMemo(() => {
+    if (!treeData?.tree || !editForm.categories?.length) return [];
+    const subs = [];
+    const seen = new Set();
+    treeData.tree.forEach(cat => {
+      if (editForm.categories.includes(cat.name) && Array.isArray(cat.children)) {
+        cat.children.forEach(child => {
+          if (child?.name && !seen.has(child.name)) {
+            seen.add(child.name);
+            subs.push({ name: child.name, parentName: cat.name });
+          }
+        });
+      }
+    });
+    return subs;
+  }, [treeData, editForm.categories]);
 
   // Get API URL from environment variables
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -96,16 +124,17 @@ const ProductList = () => {
   const debounceTimer = useRef(null);
   useEffect(() => {
     clearTimeout(debounceTimer.current);
-    const search = searchProduct;        // capture current value now
-    const category = filterCategory;     // capture current value now
+    const search = searchProduct;
+    const category = filterCategory;
+    const sub = filterSubcategory;
     debounceTimer.current = setTimeout(() => {
-      fetchProducts(1, true, search, category);
-    }, searchProduct === '' ? 0 : 400);  // no delay when clearing search
+      fetchProducts(1, true, search, category, sub);
+    }, searchProduct === '' ? 0 : 400);
     return () => clearTimeout(debounceTimer.current);
-  }, [searchProduct, filterCategory]);
+  }, [searchProduct, filterCategory, filterSubcategory]);
 
-  // Fetch products — search + category passed EXPLICITLY, defaults to current state
-  const fetchProducts = async (pageNum = 1, resetProducts = true, search = searchProduct, category = filterCategory) => {
+  // Fetch products — search + category + subcategory passed EXPLICITLY
+  const fetchProducts = async (pageNum = 1, resetProducts = true, search = searchProduct, category = filterCategory, sub = filterSubcategory) => {
     try {
       if (pageNum === 1) {
         setLoading(true);
@@ -116,8 +145,9 @@ const ProductList = () => {
 
       const token = localStorage.getItem('adminToken');
       const params = new URLSearchParams({ page: pageNum, limit: ITEMS_PER_PAGE });
-      if (search)              params.set('search', search);
+      if (search) params.set('search', search);
       if (category !== 'all') params.set('category', category);
+      if (sub && sub !== 'all') params.set('subcategory', sub);
 
       const response = await fetch(`${API_BASE_URL}/api/admin/products?${params}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
@@ -148,8 +178,6 @@ const ProductList = () => {
     }
   };
 
-  // loadMore function removed since we directly call fetchProducts in the observer
-
   // Infinite scroll using IntersectionObserver with callback ref pattern
   const observer = useRef(null);
   const sentinelRef = useCallback(node => {
@@ -161,12 +189,12 @@ const ProductList = () => {
     
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
-        fetchProducts(page + 1, false, searchProduct, filterCategory);
+        fetchProducts(page + 1, false, searchProduct, filterCategory, filterSubcategory);
       }
     }, { root: rootElement, rootMargin: '400px', threshold: 0.1 });
     
     observer.current.observe(node);
-  }, [loadingMore, hasMore, page, searchProduct, filterCategory]);
+  }, [loadingMore, hasMore, page, searchProduct, filterCategory, filterSubcategory]);
 
   const handleDelete = async (id, title) => {
     if (window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
@@ -206,6 +234,7 @@ const ProductList = () => {
       description: product.description || "",
       price: product.price ? product.price.toString() : "",
       categories: product.categories ? [...product.categories] : [],
+      subcategory: product.subcategory || "",
       featuredUntil: product.featuredUntil ? new Date(product.featuredUntil).toISOString().slice(0, 16) : "",
       isSoldOut: Boolean(product.isSoldOut),
       image: null,
@@ -328,6 +357,7 @@ const ProductList = () => {
       formData.append("description", editForm.description);
       formData.append("price", editForm.price);
       formData.append("categories", JSON.stringify(editForm.categories));
+      formData.append("subcategory", editForm.subcategory || '');
       // Featured spotlight controls
       formData.append("featuredUntil", editForm.featuredUntil ? new Date(editForm.featuredUntil).toISOString() : '');
       formData.append("isSoldOut", String(Boolean(editForm.isSoldOut)));
@@ -473,7 +503,10 @@ const ProductList = () => {
                 <div className="relative">
                   <select
                     value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
+                    onChange={(e) => {
+                      setFilterCategory(e.target.value);
+                      setFilterSubcategory("all");
+                    }}
                     className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 bg-white appearance-none pr-8"
                   >
                     <option value="all">All Categories</option>
@@ -483,6 +516,23 @@ const ProductList = () => {
                   </select>
                   <FunnelIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 </div>
+
+                {/* Subcategory Filter Dropdown (shown when category is selected and has subcategories) */}
+                {filterCategory !== 'all' && activeCategorySubcategories.length > 0 && (
+                  <div className="relative animate-fadeIn">
+                    <select
+                      value={filterSubcategory}
+                      onChange={(e) => setFilterSubcategory(e.target.value)}
+                      className="block w-full rounded-lg border-indigo-300 bg-indigo-50/70 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 appearance-none pr-8 text-indigo-900 font-medium"
+                    >
+                      <option value="all">All Subcategories</option>
+                      {activeCategorySubcategories.map(sub => (
+                        <option key={sub.name} value={sub.name}>{sub.name}</option>
+                      ))}
+                    </select>
+                    <FunnelIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400 pointer-events-none" />
+                  </div>
+                )}
 
                 {/* Sort */}
                 <div className="relative">
@@ -502,10 +552,13 @@ const ProductList = () => {
 
               {/* Active Category Display & Bottom Arrow Toggle */}
               <div className="pt-2 flex items-center justify-between border-t border-slate-100 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500">Active Category:</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-slate-500">Active Filter:</span>
                   <button
-                    onClick={() => setFilterCategory("all")}
+                    onClick={() => {
+                      setFilterCategory("all");
+                      setFilterSubcategory("all");
+                    }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                       filterCategory === "all"
                         ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -515,6 +568,18 @@ const ProductList = () => {
                     <span>{filterCategory === "all" ? `All Categories (${total})` : filterCategory}</span>
                     {filterCategory !== "all" && <XMarkIcon className="h-3.5 w-3.5 ml-0.5" />}
                   </button>
+
+                  {/* Active Subcategory Pill if selected */}
+                  {filterCategory !== 'all' && filterSubcategory !== 'all' && (
+                    <button
+                      onClick={() => setFilterSubcategory("all")}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-600 text-white shadow-sm hover:bg-teal-700 transition-colors"
+                      title="Clear subcategory filter"
+                    >
+                      <span>Sub: {filterSubcategory}</span>
+                      <XMarkIcon className="h-3.5 w-3.5 ml-0.5" />
+                    </button>
+                  )}
                 </div>
 
                 <button
@@ -531,11 +596,45 @@ const ProductList = () => {
                 </button>
               </div>
 
+              {/* Subcategories strip for active category */}
+              {filterCategory !== 'all' && activeCategorySubcategories.length > 0 && (
+                <div className="pt-2 flex items-center gap-1.5 flex-wrap border-t border-slate-100 animate-fadeIn">
+                  <span className="text-xs font-medium text-slate-500">Subcategories:</span>
+                  <button
+                    onClick={() => setFilterSubcategory("all")}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                      filterSubcategory === 'all'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    All ({filterCategory})
+                  </button>
+                  {activeCategorySubcategories.map(sub => (
+                    <button
+                      key={sub.name}
+                      onClick={() => setFilterSubcategory(filterSubcategory === sub.name ? 'all' : sub.name)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        filterSubcategory === sub.name
+                          ? 'bg-teal-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {sub.name}
+                      {filterSubcategory === sub.name && ' ✓'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Collapsible Category Filter Buttons (Hidden by default, shown via bottom arrow) */}
               {showCategoryPills && (
                 <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1 pt-2 animate-fadeIn border-t border-slate-100">
                   <button
-                    onClick={() => setFilterCategory("all")}
+                    onClick={() => {
+                      setFilterCategory("all");
+                      setFilterSubcategory("all");
+                    }}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
                       filterCategory === "all" 
                         ? "bg-indigo-600 text-white shadow-sm" 
@@ -547,7 +646,10 @@ const ProductList = () => {
                   {categoriesList.map(cat => (
                     <button
                       key={cat}
-                      onClick={() => setFilterCategory(cat)}
+                      onClick={() => {
+                        setFilterCategory(cat);
+                        setFilterSubcategory("all");
+                      }}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
                         filterCategory === cat 
                           ? "bg-indigo-600 text-white shadow-sm" 
@@ -969,6 +1071,69 @@ const ProductList = () => {
                             ))}
                           </div>
                         )}
+                      </div>
+
+                      {/* Subcategory in Edit Modal */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm font-medium text-slate-700">Subcategory (Optional)</label>
+                          {editForm.categories.length === 0 && (
+                            <span className="text-xs text-amber-600">Select a category above</span>
+                          )}
+                        </div>
+
+                        {/* Quick-select chips from existing subcategories of selected category */}
+                        {editModalSubcategories.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-xs text-slate-500 mb-1.5">Available subcategories (click to select):</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {editModalSubcategories.map(sub => (
+                                <button
+                                  key={sub.name}
+                                  type="button"
+                                  onClick={() => handleEditFormChange('subcategory', editForm.subcategory === sub.name ? '' : sub.name)}
+                                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                                    editForm.subcategory === sub.name
+                                      ? 'bg-indigo-600 text-white shadow-sm'
+                                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                                  }`}
+                                >
+                                  {sub.name}
+                                  {editForm.subcategory === sub.name && ' ✓'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editForm.subcategory || ''}
+                            onChange={(e) => handleEditFormChange('subcategory', e.target.value)}
+                            placeholder={editModalSubcategories.length > 0 ? "Select above or type custom subcategory..." : "Type subcategory (e.g. Wall Fountains)..."}
+                            className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 px-3 bg-white"
+                            list="edit-product-subcategories-datalist"
+                          />
+                          <datalist id="edit-product-subcategories-datalist">
+                            {editModalSubcategories.map(sub => (
+                              <option key={sub.name} value={sub.name} />
+                            ))}
+                          </datalist>
+                          {editForm.subcategory && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditFormChange('subcategory', '')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                              title="Clear subcategory"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Assigns or changes the product's subcategory.
+                        </p>
                       </div>
 
                       {/* Home Featured spotlight controls */}

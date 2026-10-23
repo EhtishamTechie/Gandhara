@@ -241,4 +241,67 @@ const renameCategory = async (req, res) => {
   }
 };
 
-module.exports = { getCategoryOrder, updateCategoryOrder, getProductsGrouped, renameCategory };
+/**
+ * DELETE /api/admin/category-order/:categoryName
+ * Deletes a category completely:
+ * 1. Removes from CategoryOrder config document
+ * 2. Removes from SidebarSettings overrides
+ * 3. Deletes any Subcategory docs under this parent
+ * 4. Removes the category name from all Product.categories arrays so it won't resurrect
+ * 5. Clears API cache
+ */
+const deleteCategory = async (req, res) => {
+  try {
+    const categoryName = decodeURIComponent(req.params.categoryName || req.body?.categoryName || req.body?.name || '').trim();
+
+    if (!categoryName) {
+      return res.status(400).json({ success: false, message: 'categoryName is required' });
+    }
+
+    // 1. Remove from CategoryOrder
+    await CategoryOrder.updateOne(
+      { configKey: 'main' },
+      { $pull: { categories: { name: categoryName } } }
+    );
+
+    // 2. Remove from SidebarSettings
+    await SidebarSettings.updateOne(
+      { configKey: 'main' },
+      { $pull: { overrides: { categoryName: categoryName } } }
+    );
+
+    // 3. Remove subcategories under this parent and clear from products
+    const childSubs = await Subcategory.find({ parentCategoryName: categoryName }).lean();
+    const childNames = childSubs.map(s => s.name);
+    await Subcategory.deleteMany({ parentCategoryName: categoryName });
+
+    // 4. Remove this category from all products (crucial to prevent auto-reseed resurrection!)
+    const productUpdate = await Product.updateMany(
+      { categories: categoryName },
+      { $pull: { categories: categoryName } }
+    );
+
+    if (childNames.length > 0) {
+      await Product.updateMany(
+        { subcategory: { $in: childNames } },
+        { $set: { subcategory: '' } }
+      );
+    }
+
+    // 5. Clear API cache
+    apiCache.clear();
+
+    console.log(`Category deleted: "${categoryName}" (removed from ${productUpdate.modifiedCount} products)`);
+
+    res.json({
+      success: true,
+      message: `Category "${categoryName}" deleted successfully`,
+      productsUpdated: productUpdate.modifiedCount
+    });
+  } catch (error) {
+    console.error('deleteCategory error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getCategoryOrder, updateCategoryOrder, getProductsGrouped, renameCategory, deleteCategory };

@@ -362,10 +362,83 @@ const adminDeleteSubcategory = async (req, res) => {
     const doc = await Subcategory.findByIdAndDelete(req.params.id);
     if (!doc) return res.status(404).json({ success: false, message: 'Subcategory not found' });
 
+    // Clear subcategory from any products that had it
+    await Product.updateMany({ subcategory: doc.name }, { $set: { subcategory: '' } });
+
     apiCache.clear();
     res.json({ success: true, message: 'Subcategory deleted', subcategory: doc });
   } catch (err) {
     console.error('adminDeleteSubcategory error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * POST /api/admin/subcategories/:id/promote
+ * Converts/promotes a subcategory into a top-level category:
+ * 1. Finds the Subcategory document
+ * 2. Adds the name to CategoryOrder.categories if not already there
+ * 3. Adds to SidebarSettings.overrides if not already there
+ * 4. For any product with this subcategory, adds it to their categories array
+ * 5. Deletes the subcategory document from Subcategory collection
+ * 6. Clears API cache
+ */
+const adminPromoteSubcategory = async (req, res) => {
+  try {
+    const subDoc = await Subcategory.findById(req.params.id);
+    if (!subDoc) {
+      return res.status(404).json({ success: false, message: 'Subcategory not found' });
+    }
+
+    const newCategoryName = subDoc.name.trim();
+
+    // 1. Ensure CategoryOrder contains this new top-level category
+    let orderDoc = await CategoryOrder.findOne({ configKey: 'main' });
+    if (!orderDoc) {
+      await ensureCategoryOrder();
+      orderDoc = await CategoryOrder.findOne({ configKey: 'main' });
+    }
+
+    const existsInOrder = orderDoc?.categories?.some(
+      (c) => c.name.toLowerCase() === newCategoryName.toLowerCase()
+    );
+
+    if (!existsInOrder) {
+      await CategoryOrder.updateOne(
+        { configKey: 'main' },
+        { $push: { categories: { name: newCategoryName, isVisible: true } } }
+      );
+    }
+
+    // 2. Add to SidebarSettings overrides
+    await SidebarSettings.updateOne(
+      { configKey: 'main' },
+      { $addToSet: { overrides: { categoryName: newCategoryName, showInSidebar: true, sortOrder: 999 } } },
+      { upsert: true }
+    );
+
+    // 3. Update products that have this subcategory to also include it in categories
+    const productUpdate = await Product.updateMany(
+      { subcategory: newCategoryName },
+      { $addToSet: { categories: newCategoryName } }
+    );
+
+    // 4. Remove this subcategory from the Subcategory collection (it is now a main category!)
+    await Subcategory.findByIdAndDelete(req.params.id);
+
+    // 5. Clear API cache
+    apiCache.clear();
+
+    console.log(`Subcategory "${newCategoryName}" promoted to main category (${productUpdate.modifiedCount} products updated)`);
+
+    res.json({
+      success: true,
+      message: `Subcategory "${newCategoryName}" is now a main category!`,
+      categoryName: newCategoryName,
+      productsUpdated: productUpdate.modifiedCount
+    });
+  } catch (err) {
+    console.error('adminPromoteSubcategory error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -414,5 +487,6 @@ module.exports = {
   adminCreateSubcategory,
   adminUpdateSubcategory,
   adminDeleteSubcategory,
+  adminPromoteSubcategory,
   adminReorderSubcategories
 };

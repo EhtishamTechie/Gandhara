@@ -7,6 +7,7 @@ const productSchema = new mongoose.Schema({
     price: { type: Number, required: true },
     image: { type: String, required: true },
     categories: [{ type: String, required: true }],
+    subcategory: { type: String, trim: true, default: '' },
     
     // SEO Core Fields
     slug: { 
@@ -105,6 +106,7 @@ const productSchema = new mongoose.Schema({
 
 // 1. Category searches (most common query) - speeds up category pages
 productSchema.index({ categories: 1, createdAt: -1 });
+productSchema.index({ subcategory: 1, categories: 1, createdAt: -1 });
 
 // 2. Slug lookups (SEO-friendly URLs) - speeds up product detail pages
 productSchema.index({ slug: 1, isActive: 1 });

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PlusIcon, PencilIcon, XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/20/solid';
 import AdminLogin from '../components/AdminLogin';
-import { useCategoryList } from '../hooks/useApi';
+import { useCategoryList, useCategoryTree } from '../hooks/useApi';
 
 // Get API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -12,6 +12,7 @@ const AddProduct = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [categories, setCategories] = useState([]);
+  const [subcategory, setSubcategory] = useState("");
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
@@ -38,9 +39,28 @@ const AddProduct = () => {
 
   // Fetch categories from backend (admin-managed)
   const { data: catData } = useCategoryList();
+  const { data: treeData } = useCategoryTree();
   const categoriesList = catData?.categories
     ? catData.categories.map(c => c.name)
     : [];
+
+  // Available subcategories for currently checked categories
+  const availableSubcategories = useMemo(() => {
+    if (!treeData?.tree || categories.length === 0) return [];
+    const subs = [];
+    const seen = new Set();
+    treeData.tree.forEach(cat => {
+      if (categories.includes(cat.name) && Array.isArray(cat.children)) {
+        cat.children.forEach(child => {
+          if (child?.name && !seen.has(child.name)) {
+            seen.add(child.name);
+            subs.push({ name: child.name, parentName: cat.name });
+          }
+        });
+      }
+    });
+    return subs;
+  }, [treeData, categories]);
 
   // Auto-generate SEO fields when title or categories change
   useEffect(() => {
@@ -74,6 +94,7 @@ const AddProduct = () => {
     setDescription("");
     setPrice("");
     setCategories([]);
+    setSubcategory("");
     setImage(null);
     setImagePreview(null);
     setEditingProductId(null);
@@ -117,6 +138,7 @@ const AddProduct = () => {
       }
 
       if (parsed.shortDescription) setShortDescription(parsed.shortDescription);
+      if (parsed.subcategory) setSubcategory(parsed.subcategory);
       
       // SEO Fields
       if (parsed.seoTitle) setSeoTitle(parsed.seoTitle);
@@ -234,6 +256,7 @@ const AddProduct = () => {
     formData.append("description", description);
     formData.append("price", price);
     formData.append("categories", JSON.stringify(categories));
+    if (subcategory) formData.append("subcategory", subcategory);
 
     // SEO Fields
     if (seoTitle) formData.append("seoTitle", seoTitle);
@@ -599,6 +622,70 @@ const AddProduct = () => {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Subcategory */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className={labelClass}>Subcategory (Optional)</label>
+              {categories.length === 0 && (
+                <span className="text-xs text-amber-600">Select a category above to view available subcategories</span>
+              )}
+            </div>
+
+            {/* Quick-select chips from existing subcategories of selected category */}
+            {availableSubcategories.length > 0 && (
+              <div className="mb-2">
+                <p className="text-xs text-stone-500 mb-1.5">Available subcategories for selected categories (click to choose):</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableSubcategories.map(sub => (
+                    <button
+                      key={sub.name}
+                      type="button"
+                      onClick={() => setSubcategory(subcategory === sub.name ? "" : sub.name)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        subcategory === sub.name
+                          ? 'bg-teal-600 text-white shadow-sm'
+                          : 'bg-stone-100 text-stone-700 hover:bg-stone-200 border border-stone-200'
+                      }`}
+                    >
+                      {sub.name}
+                      {subcategory === sub.name && ' ✓'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Subcategory input (choose from dropdown or type new) */}
+            <div className="relative">
+              <input
+                type="text"
+                value={subcategory}
+                onChange={(e) => setSubcategory(e.target.value)}
+                placeholder={availableSubcategories.length > 0 ? "Select above or type custom subcategory..." : "Type subcategory (e.g. Wall Fountains, Buddha Statues)..."}
+                className={inputClass}
+                list="add-product-subcategories-datalist"
+              />
+              <datalist id="add-product-subcategories-datalist">
+                {availableSubcategories.map(sub => (
+                  <option key={sub.name} value={sub.name} />
+                ))}
+              </datalist>
+              {subcategory && (
+                <button
+                  type="button"
+                  onClick={() => setSubcategory("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1"
+                  title="Clear subcategory"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-stone-500 mt-1">
+              Assigns this product to a subcategory. If you type a new name, it will be automatically added to the category.
+            </p>
           </div>
 
           {/* Home Featured spotlight controls */}

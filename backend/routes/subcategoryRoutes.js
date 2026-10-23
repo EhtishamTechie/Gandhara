@@ -9,6 +9,7 @@ const {
   adminCreateSubcategory,
   adminUpdateSubcategory,
   adminDeleteSubcategory,
+  adminPromoteSubcategory,
   adminReorderSubcategories
 } = require('../controllers/subcategoryController');
 
@@ -28,6 +29,7 @@ router.get('/', listTopLevelCategories);
 const adminRouter = express.Router();
 // Specific paths first.
 adminRouter.put('/reorder', adminReorderSubcategories);
+adminRouter.post('/:id/promote', adminPromoteSubcategory);
 adminRouter.get('/', adminListSubcategories);
 adminRouter.post('/', adminCreateSubcategory);
 adminRouter.put('/:id', adminUpdateSubcategory);

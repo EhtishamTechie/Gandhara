@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getCategoryOrder, updateCategoryOrder, renameCategory } = require('../controllers/categoryOrderController');
+const { getCategoryOrder, updateCategoryOrder, renameCategory, deleteCategory } = require('../controllers/categoryOrderController');
 
 // GET  /api/category-order  — public (read the order)
 router.get('/', getCategoryOrder);
@@ -10,5 +10,9 @@ router.put('/', updateCategoryOrder);
 
 // PUT  /api/category-order/rename  — protected (rename category in order + all products)
 router.put('/rename', renameCategory);
+
+// DELETE /api/admin/category-order/:categoryName — protected (delete category completely)
+router.delete('/:categoryName', deleteCategory);
+router.delete('/', deleteCategory);
 
 module.exports = router;
